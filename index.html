@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="전국 아파트 자동 점수 · 장단점 분석기 — API 키 없이 OSM 기반 무료 분석">
+  <title>AptScore — 전국 아파트 자동 분석기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800;900&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 헤더 -->
+<header class="site-header">
+  <a class="logo" href="#">
+    <div class="logo-icon">🏠</div>
+    <span class="logo-text">AptScore</span>
+    <span class="logo-badge">v2</span>
+  </a>
+  <nav class="header-nav">
+    <button class="nav-btn active">분석기</button>
+    <button class="nav-btn" id="api-toggle">⚙️ API 설정</button>
+  </nav>
+  <div class="api-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">OSM 모드</span>
+  </div>
+</header>
+
+<!-- 히어로 -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span>🆓</span> API 키 없이 바로 사용 — OpenStreetMap + 공공데이터
+    </div>
+    <h1>전국 아파트<br><em>자동 점수 · 장단점 분석기</em></h1>
+    <p class="hero-sub">
+      카카오 API 불필요. <b>OpenStreetMap(Nominatim + Overpass)</b>으로 위치·교통·학군·편의시설을 무료 분석.<br>
+      국토교통부 API 키(무료 발급)를 추가하면 실거래가·시세변동·가격수준까지 실데이터로 분석됩니다.
+    </p>
+    <div class="search-wrap">
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input"
+          placeholder="아파트 이름 입력 (예: 래미안퍼스티지, 헬리오시티)"
+          autocomplete="off">
+        <div class="autocomplete-list" id="ac-list"></div>
+      </div>
+      <button class="search-btn" id="search-btn">🔍 분석 시작</button>
+    </div>
+    <div class="quick-search">
+      <span class="quick-label">빠른 검색:</span>
+      <div id="quick-search" style="display:contents"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 통계 바 -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#EFF6FF">📊</div>
+      <div class="stat-info"><div class="stat-val">7개 항목</div><div class="stat-label">100점 평가</div></div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#F0FDF4">🆓</div>
+      <div class="stat-info"><div class="stat-val">완전 무료</div><div class="stat-label">OSM 기반 분석</div></div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#FFF7ED">🏙️</div>
+      <div class="stat-info"><div class="stat-val">7개 시설</div><div class="stat-label">핵심 업무지구 거리</div></div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat-item">
+      <div class="stat-icon" style="background:#FEF2F2">📋</div>
+      <div class="stat-info"><div class="stat-val">실거래가</div><div class="stat-label">MOLIT 키 입력 시</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 메인 -->
+<div class="main-content">
+
+  <!-- API 설정 패널 (국토교통부 키만) -->
+  <div class="api-panel" id="api-panel">
+    <div class="api-panel-header" id="api-panel-header"
+      style="cursor:default;pointer-events:none">
+      <div class="api-panel-title">
+        ⚙️ 국토교통부 실거래가 API 키 (선택사항)
+        <span style="font-size:11px;font-weight:400;color:#64748B">
+          — 없어도 OSM으로 5개 항목 분석 가능
+        </span>
+      </div>
+    </div>
+    <div class="api-panel-body" style="display:block">
+      <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end">
+        <div class="api-field">
+          <label>🗂️ 국토교통부 실거래가 API 키</label>
+          <input type="text" id="molit-key-input" placeholder="data.go.kr에서 발급한 서비스 키 (선택사항)">
+          <div class="field-hint">
+            <a href="https://www.data.go.kr/tcs/dss/selectApiDataDetailView.do?publicDataPk=15058747" target="_blank">
+              👉 data.go.kr 무료 발급 (자동승인, 1~2시간)
+            </a>
+            &nbsp;·&nbsp; 실거래가·시세변동·가격수준 분석에 필요
+          </div>
+        </div>
+        <button class="api-save-btn" id="api-save-btn" style="height:44px;white-space:nowrap">
+          💾 저장
+        </button>
+      </div>
+      <div class="api-notice" style="margin-top:12px">
+        ✅ <b>카카오 API 키 불필요</b> —
+        위치(Nominatim OSM) · 교통/학군/편의시설(Overpass OSM) · 핵심시설 거리(하드코딩 좌표)는
+        모두 <b>API 키 없이 무료로 분석</b>됩니다.<br>
+        📌 실거래가 / 시세변동 / 가격수준 3개 항목은 국토교통부 키 입력 시 실데이터 사용,
+        미입력 시 기본값 50점으로 처리됩니다.
+      </div>
+    </div>
+  </div>
+
+  <!-- 로딩 -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <p id="loading-msg" style="font-size:14px;color:#64748B;margin-bottom:20px">분석 중...</p>
+    <div class="loading-steps">
+      <div class="loading-step">📍 Nominatim OSM 위치 조회</div>
+      <div class="loading-step">🏙️ 핵심시설 거리 계산</div>
+      <div class="loading-step">🚇 Overpass OSM 교통 분석</div>
+      <div class="loading-step">🏫 Overpass OSM 학군 분석</div>
+      <div class="loading-step">🏪 Overpass OSM 편의시설 분석</div>
+      <div class="loading-step">📡 국토교통부 실거래가 수집</div>
+      <div class="loading-step">📊 점수 계산 및 리포트 생성</div>
+    </div>
+  </div>
+
+  <!-- 에러 -->
+  <div class="error-box" id="error-box"></div>
+
+  <!-- 결과 -->
+  <div id="result-section">
+
+    <!-- 헤더 카드 -->
+    <div class="result-header fade-in-up">
+      <div class="result-header-top">
+        <div>
+          <div class="result-apt-name" id="res-apt-name"></div>
+          <div class="result-apt-addr">📍 <span id="res-apt-addr"></span></div>
+        </div>
+        <div class="result-score-group">
+          <div class="score-ring">
+            <svg viewBox="0 0 100 100">
+              <circle class="score-ring-bg" cx="50" cy="50" r="46"/>
+              <circle class="score-ring-fill" id="res-ring-fill"
+                cx="50" cy="50" r="46" stroke-dasharray="289" stroke-dashoffset="289"/>
+            </svg>
+            <div class="score-ring-text">
+              <div class="score-num" id="res-score-num">--</div>
+              <div class="score-sub">/ 100</div>
+            </div>
+          </div>
+          <div class="grade-block">
+            <div class="grade-letter" id="res-grade">-</div>
+            <div class="grade-desc" id="res-grade-desc">등급</div>
+          </div>
+          <div class="score-gauge-wrap">
+            <div class="gauge-label">종합 점수</div>
+            <div class="gauge-bar-bg">
+              <div class="gauge-bar-fill" id="res-gauge-fill" style="width:0%"></div>
+            </div>
+            <div class="gauge-ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="result-meta">
+        📅 분석: <span id="res-date"></span> &nbsp;·&nbsp;
+        위치·교통·학군: OpenStreetMap &nbsp;·&nbsp; 실거래가: 국토교통부
+      </div>
+    </div>
+
+    <!-- 점수 카드 -->
+    <div class="score-cards" id="score-cards"></div>
+
+    <!-- 장단점 + 레이더 -->
+    <div class="two-col">
+      <div>
+        <div class="pros-cons-grid">
+          <div class="pc-panel">
+            <div class="pc-header pros">✅ 주요 장점</div>
+            <div class="pc-body" id="pros-list"></div>
+          </div>
+          <div class="pc-panel">
+            <div class="pc-header cons">⚠️ 주의사항</div>
+            <div class="pc-body" id="cons-list"></div>
+          </div>
+        </div>
+        <div class="invest-panel">
+          <div class="invest-title">💡 투자 · 실거주 의견</div>
+          <div class="invest-text" id="invest-text"></div>
+          <div class="invest-target" id="invest-target"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">🕸️ 항목별 분석 레이더</div>
+        <div class="panel-body" style="display:flex;align-items:center;justify-content:center">
+          <canvas id="radar-canvas" width="380" height="340" style="max-width:100%;height:auto"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 핵심시설 거리 + 가격추이 -->
+    <div class="charts-row">
+      <div class="panel">
+        <div class="panel-header">🏙️ 핵심 업무지구까지 거리</div>
+        <div class="panel-body">
+          <div id="hub-bars" class="hub-list"></div>
+          <div style="margin-top:14px;font-size:11px;color:#94A3B8;display:flex;gap:16px;flex-wrap:wrap">
+            <span>🟢 3km 이하 — 우수</span>
+            <span>🟡 3~8km — 보통</span>
+            <span>🔴 8km 초과 — 먼 편</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">📈 월별 실거래가 추이 (㎡당, 만원)</div>
+        <div class="panel-body" style="padding:12px">
+          <canvas id="trend-canvas" width="480" height="240" style="max-width:100%;height:auto"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 실거래 테이블 -->
+    <div class="panel trade-table-wrap">
+      <div class="panel-header">
+        📋 실거래 내역
+        <span style="font-weight:400;font-size:12px;color:#94A3B8;margin-left:auto">최근 6개월 · 최대 20건</span>
+      </div>
+      <div class="panel-body" style="padding:12px 0 0">
+        <div class="filter-bar" style="padding:0 20px 12px">
+          <span class="filter-label">면적 필터:</span>
+          <button class="filter-chip active" data-area="all">전체</button>
+          <button class="filter-chip" data-area="33-66">33~66㎡</button>
+          <button class="filter-chip" data-area="66-99">66~99㎡</button>
+          <button class="filter-chip" data-area="99-132">99~132㎡</button>
+          <button class="filter-chip" data-area="132-">132㎡+</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead><tr>
+              <th>아파트명</th><th>거래일</th><th>전용면적</th>
+              <th>층</th><th>거래가</th><th>㎡당 단가</th>
+            </tr></thead>
+            <tbody id="trade-tbody">
+              <tr><td colspan="6" style="text-align:center;padding:40px;color:#94A3B8">
+                아파트를 검색하면 실거래 내역이 표시됩니다<br>
+                <small style="font-size:11px">(국토교통부 API 키 입력 시 실데이터 표시)</small>
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:12px 20px;font-size:11px;color:#94A3B8;border-top:1px solid #F1F5F9">
+          ※ 국토교통부 실거래가 공개시스템 · OpenStreetMap 데이터 기준. 실제 투자 결정은 전문가 상담을 권장합니다.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /result-section -->
+</div><!-- /main-content -->
+
+<!-- 푸터 -->
+<footer style="background:var(--navy);color:rgba(255,255,255,0.3);text-align:center;padding:28px 24px;font-size:12px;line-height:1.9">
+  <div style="margin-bottom:6px;font-weight:600;color:rgba(255,255,255,0.5)">🏠 AptScore v2</div>
+  위치·교통·학군·편의시설: <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color:rgba(255,255,255,0.4)">© OpenStreetMap contributors</a>
+  &nbsp;·&nbsp; 실거래가: 국토교통부 실거래가 공개시스템<br>
+  본 서비스는 참고용이며 실제 투자 결정은 전문가 상담을 권장합니다.
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
