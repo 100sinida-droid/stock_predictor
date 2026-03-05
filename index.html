@@ -1001,213 +1001,142 @@ body::after{
 <div class="toast" id="toast"></div>
 <script>
 
-/* ══════════════════════════════════════════════════════
-   전국 아파트 DB 수집 시스템 v3
-   - 공공데이터 AptListService2/getAptList JSONP
-   - XML 응답 파싱 (기본) + JSON 폴백
-   - IndexedDB 캐시 (재방문 즉시 로드)
-   - 수집 중에도 407개 정적DB로 즉시 검색
-   - 완료 시 APT_DB 자동 병합 (전국 6,857개)
-══════════════════════════════════════════════════════ */
+/* ─── API 설정 ─── */
+const CFG={
+  molit:'fad551728c95a236e14821d54bccaada546838a751e426dc9df4a3e813bb51e9',
+  kakao:'cdab16e154b37e68a32ae0e6d9d91b9d',
+  ok(){return !!this.molit;},
+  kakaoOk(){return !!this.kakao;},
+};
 
-/* ─── 전역 상태 ─── */
-const FULL_DB_VERSION = 3;
-const IDB_NAME  = 'aptscoreDB_v3';
-const IDB_STORE = 'apts';
-let fullDbApts  = [];
+/* ─── 전역 맵 (onclick 클릭용) ─── */
+const _AMAP=[];
+function _aptIdx(apt){_AMAP.push(apt);return _AMAP.length-1;}
+function pickIdx(i){const a=_AMAP[i];if(a)pickApt(a);}
+function clearAmap(){_AMAP.length=0;}
+
+/* ─── 전국 DB 수집 상태 ─── */
+let fullDbApts   = [];   // 수집된 전국 단지
 let dbCollecting = false;
-let dbPaused    = false;
-let dbCurrentPage = 1;
-let dbTotalCount  = 0;
-let dbFetchedAll  = false;   // 수집 완료 플래그
+let dbPaused     = false;
+let dbCurrentPage= 1;
+let dbTotalCount = 0;
+let dbDone       = false;
 
-/* ─── IndexedDB 헬퍼 ─── */
+/* ─── IndexedDB ─── */
+const IDB_NAME='aptscoreDB_v4', IDB_VER=4;
 function openIDB(){
   return new Promise((res,rej)=>{
-    const req=indexedDB.open(IDB_NAME, FULL_DB_VERSION);
+    const req=indexedDB.open(IDB_NAME,IDB_VER);
     req.onupgradeneeded=e=>{
       const db=e.target.result;
-      ['apts','meta'].forEach(s=>{
-        if(!db.objectStoreNames.contains(s))
-          db.createObjectStore(s,{keyPath:'code'});
-      });
+      ['apts','meta'].forEach(s=>{if(!db.objectStoreNames.contains(s))db.createObjectStore(s,{keyPath:'code'});});
     };
     req.onsuccess=e=>res(e.target.result);
     req.onerror=e=>rej(e.target.error);
   });
 }
-function idbTx(db,stores,mode,fn){
+async function idbGet(db,st,key){return new Promise((r,j)=>{const q=db.transaction(st,'readonly').objectStore(st).get(key);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});}
+async function idbGetAll(db,st){return new Promise((r,j)=>{const q=db.transaction(st,'readonly').objectStore(st).getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>j(q.error);});}
+async function idbPutAll(db,st,items){
+  if(!items||!items.length)return;
   return new Promise((res,rej)=>{
-    const tx=db.transaction(stores,mode);
-    tx.oncomplete=()=>res();
-    tx.onerror=()=>rej(tx.error);
-    fn(tx);
-  });
-}
-async function idbGet(db,store,key){
-  return new Promise((res,rej)=>{
-    const req=db.transaction(store,'readonly').objectStore(store).get(key);
-    req.onsuccess=()=>res(req.result);
-    req.onerror=()=>rej(req.error);
-  });
-}
-async function idbGetAll(db,store){
-  return new Promise((res,rej)=>{
-    const req=db.transaction(store,'readonly').objectStore(store).getAll();
-    req.onsuccess=()=>res(req.result||[]);
-    req.onerror=()=>rej(req.error);
-  });
-}
-async function idbPutAll(db,store,items){
-  if(!items.length) return;
-  return idbTx(db,store,'readwrite',tx=>{
-    const os=tx.objectStore(store);
+    const tx=db.transaction(st,'readwrite'),os=tx.objectStore(st);
     items.forEach(i=>os.put(i));
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
   });
 }
-async function idbClear(db,store){
-  return idbTx(db,store,'readwrite',tx=>tx.objectStore(store).clear());
-}
+async function idbClear(db,st){return new Promise((r,j)=>{const tx=db.transaction(st,'readwrite');tx.objectStore(st).clear();tx.oncomplete=r;tx.onerror=j;});}
 
-/* ─── API 호출: JSONP + XML/JSON 파싱 ─── */
-const APT_LIST_API = 'https://apis.data.go.kr/1613000/AptListService2/getAptList';
+/* ─── 공공데이터 아파트 목록 API ─── */
+const APT_LIST_URL='https://apis.data.go.kr/1613000/AptListService2/getAptList';
 
-function fetchAptPage(page, numOfRows){
+function fetchAptPageJSONP(page,rows){
   return new Promise(resolve=>{
-    const cb   = '_al_'+Date.now()+'_p'+page;
-    const timer = setTimeout(()=>{ cleanup(); resolve(null); }, 15000);
-    function cleanup(){
-      clearTimeout(timer);
-      delete window[cb];
-      const s=document.getElementById(cb);
-      if(s) s.remove();
-    }
-
-    // JSONP 콜백: JSON 응답 처리
-    window[cb] = function(data){
+    const cb='_al'+Date.now()+'p'+page;
+    const t=setTimeout(()=>{cleanup();resolve(null);},12000);
+    function cleanup(){clearTimeout(t);delete window[cb];document.getElementById(cb)?.remove();}
+    window[cb]=function(data){
       cleanup();
       try{
-        const b = data?.body ?? data?.response?.body ?? data ?? {};
-        const tc = parseInt(b.totalCount ?? b.total_count ?? '0', 10) || 0;
-        const raw = b.items ?? b.item ?? [];
-        const items = Array.isArray(raw) ? raw
-          : (raw?.item ? [].concat(raw.item) : [raw].filter(x=>x?.kaptCode||x?.kaptName));
-        resolve({ totalCount:tc, items });
-      }catch(e){ resolve(null); }
+        const b=data?.body??data?.response?.body??{};
+        const tc=parseInt(b.totalCount??'0',10)||0;
+        const raw=b.items??{};
+        const arr=Array.isArray(raw)?raw:(raw?.item?[].concat(raw.item):[]);
+        resolve({tc,arr});
+      }catch{resolve(null);}
     };
-
-    const url = `${APT_LIST_API}?serviceKey=${CFG.molit}`+
-      `&pageNo=${page}&numOfRows=${numOfRows}&_callback=${cb}`;
-    const s = document.createElement('script');
-    s.id = cb; s.src = url;
-    s.onerror = ()=>{ cleanup(); resolve(null); };
+    const s=document.createElement('script');
+    s.id=cb;
+    s.src=`${APT_LIST_URL}?serviceKey=${CFG.molit}&pageNo=${page}&numOfRows=${rows}&_callback=${cb}`;
+    s.onerror=()=>{cleanup();resolve(null);};
     document.head.appendChild(s);
   });
 }
 
-/* XML 응답 → 파싱 (JSONP 실패 시 일반 fetch로 재시도) */
-async function fetchAptPageXML(page, numOfRows){
-  const url = `${APT_LIST_API}?serviceKey=${CFG.molit}`+
-    `&pageNo=${page}&numOfRows=${numOfRows}`;
-  try{
-    // CORS 프록시로 XML 호출
-    const proxies = [
-      `https://corsproxy.io/?${encodeURIComponent(url)}`,
-      `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    ];
-    for(const proxy of proxies){
-      try{
-        const r = await fetch(proxy, {signal:AbortSignal.timeout(12000)});
-        if(!r.ok) continue;
-        const txt = await r.text();
-        if(!txt.includes('<kaptName>') && !txt.includes('<item>')) continue;
-        const xml = new DOMParser().parseFromString(txt,'text/xml');
-        const tc  = parseInt(xml.querySelector('totalCount')?.textContent||'0',10)||0;
-        const els = Array.from(xml.querySelectorAll('item'));
-        const items = els.map(el=>({
-          kaptCode: el.querySelector('kaptCode')?.textContent?.trim()||'',
-          kaptName: el.querySelector('kaptName')?.textContent?.trim()||'',
-          as1: el.querySelector('as1')?.textContent?.trim()||'',
-          as2: el.querySelector('as2')?.textContent?.trim()||'',
-          as3: el.querySelector('as3')?.textContent?.trim()||'',
-          as4: el.querySelector('as4')?.textContent?.trim()||'',
-          bjdCode: el.querySelector('bjdCode')?.textContent?.trim()||'',
-        })).filter(i=>i.kaptName);
-        if(items.length) return {totalCount:tc, items};
-      }catch(e){}
-    }
-  }catch(e){}
+async function fetchAptPageXML(page,rows){
+  const url=`${APT_LIST_URL}?serviceKey=${CFG.molit}&pageNo=${page}&numOfRows=${rows}`;
+  const proxies=[
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  ];
+  for(const proxy of proxies){
+    try{
+      const r=await fetch(proxy,{signal:AbortSignal.timeout(10000)});
+      if(!r.ok)continue;
+      const txt=await r.text();
+      if(!txt.includes('<kaptName>'))continue;
+      const xml=new DOMParser().parseFromString(txt,'text/xml');
+      const tc=parseInt(xml.querySelector('totalCount')?.textContent||'0',10)||0;
+      const arr=[...xml.querySelectorAll('item')].map(el=>{
+        const g=n=>el.querySelector(n)?.textContent?.trim()||'';
+        return{kaptCode:g('kaptCode'),kaptName:g('kaptName'),as1:g('as1'),as2:g('as2'),as3:g('as3'),as4:g('as4'),bjdCode:g('bjdCode')};
+      }).filter(i=>i.kaptName);
+      if(arr.length) return{tc,arr};
+    }catch(e){}
+  }
   return null;
 }
 
-/* 한 페이지 수집: JSONP 먼저, 실패 시 XML 폴백 */
-async function fetchOnePage(page, numOfRows=100){
-  let result = await fetchAptPage(page, numOfRows);
-  if(!result || !result.items?.length){
-    result = await fetchAptPageXML(page, numOfRows);
-  }
-  return result;
+async function fetchOnePage(page,rows=100){
+  let r=await fetchAptPageJSONP(page,rows);
+  if(!r||!r.arr?.length) r=await fetchAptPageXML(page,rows);
+  return r;
 }
 
-/* ─── 시도별 대표 좌표 ─── */
+/* ─── 지역 좌표 ─── */
 const SIDO_COORD={
-  '서울':[37.5665,126.9780],'부산':[35.1796,129.0756],
-  '대구':[35.8714,128.6014],'인천':[37.4563,126.7052],
-  '광주':[35.1595,126.8526],'대전':[36.3504,127.3845],
-  '울산':[35.5384,129.3114],'세종':[36.4801,127.2890],
-  '경기':[37.4138,127.5183],'강원':[37.8228,128.1555],
-  '충북':[36.6357,127.4912],'충남':[36.5184,126.8000],
-  '전북':[35.7167,127.1442],'전남':[34.8679,126.9910],
-  '경북':[36.4919,128.8889],'경남':[35.2388,128.6922],
-  '제주':[33.4890,126.4983],
+  '서울':[37.5665,126.9780],'부산':[35.1796,129.0756],'대구':[35.8714,128.6014],
+  '인천':[37.4563,126.7052],'광주':[35.1595,126.8526],'대전':[36.3504,127.3845],
+  '울산':[35.5384,129.3114],'세종':[36.4801,127.2890],'경기':[37.4138,127.5183],
+  '강원':[37.8228,128.1555],'충북':[36.6357,127.4912],'충남':[36.5184,126.8000],
+  '전북':[35.7167,127.1442],'전남':[34.8679,126.9910],'경북':[36.4919,128.8889],
+  '경남':[35.2388,128.6922],'제주':[33.4890,126.4983],
 };
-
-/* 시/도명 정규화 */
 function normCity(s){
-  if(!s) return '기타';
-  return s.replace(/특별시|광역시|특별자치시|특별자치도/g,'')
-          .replace(/도$/,'').replace(/시$/,'').trim()||s.trim();
+  return(s||'').replace(/특별시|광역시|특별자치시|특별자치도/g,'').replace(/도$/,'').replace(/시$/,'').trim()||'기타';
 }
-
-/* 키워드 생성 */
-function makeKws(name){
-  const set=new Set([name]);
-  ['호반써밋','래미안','자이','아이파크','힐스테이트','푸르지오',
-   'e편한세상','롯데캐슬','더샵','SK뷰','리센츠','엘스','파크리오',
-   '위브','두산','한양수자인','우남','대우','현대','삼성'].forEach(b=>{
-    if(name.includes(b)){
-      const pre=name.slice(0,name.indexOf(b)).trim();
-      if(pre) set.add(pre);
-      set.add(b);
-    }
+function seededRand(s){let h=0;for(let i=0;i<s.length;i++)h=Math.imul(31,h)+s.charCodeAt(i)|0;return(h>>>0)/4294967296;}
+function makeKws(n){
+  const s=new Set([n]);
+  ['호반써밋','래미안','자이','아이파크','힐스테이트','푸르지오','e편한세상','롯데캐슬','더샵','SK뷰','리센츠','엘스','파크리오','위브','두산','한양수자인'].forEach(b=>{
+    if(n.includes(b)){const p=n.slice(0,n.indexOf(b)).trim();if(p)s.add(p);s.add(b);}
   });
-  const words=name.match(/[가-힣]+/g)||[];
-  if(words.length>=2) set.add(words.slice(0,2).join(''));
-  if(words.length>=3) set.add(words.slice(0,3).join(''));
-  return [...set];
+  const w=n.match(/[가-힣]+/g)||[];
+  if(w.length>=2)s.add(w.slice(0,2).join(''));
+  return[...s];
 }
-
-/* 결정론적 좌표 분산 */
-function seededRand(seed){
-  let h=0;
-  for(let i=0;i<seed.length;i++) h=Math.imul(31,h)+seed.charCodeAt(i)|0;
-  return (h>>>0)/4294967296;
-}
-
-/* API 항목 → APT_DB 포맷 */
 function toAptEntry(item){
-  const name=(item.kaptName||item.name||'').trim();
-  if(!name) return null;
+  const name=(item.kaptName||item.name||'').trim();if(!name)return null;
   const city=normCity(item.as1||'');
-  const gu  =(item.as2||'').trim()||city;
+  const gu=(item.as2||'').trim()||city;
   const dong=(item.as3||'').trim();
-  const [bla,blo]=SIDO_COORD[city]||[37.5665,126.9780];
-  const la=item.la||(bla+(seededRand(name+'la')-0.5)*0.25);
-  const lo=item.lo||(blo+(seededRand(name+'lo')-0.5)*0.35);
+  const[bla,blo]=SIDO_COORD[city]||[37.5665,126.9780];
   return{
     k:makeKws(name),n:name,city,gu,dong,
     a:`${city} ${gu} ${dong}`.trim(),
-    la:+la.toFixed(4),lo:+lo.toFixed(4),
+    la:+(bla+(seededRand(name+'la')-0.5)*0.25).toFixed(4),
+    lo:+(blo+(seededRand(name+'lo')-0.5)*0.35).toFixed(4),
     yr:item.yr||0,st:item.st||'',sd:item.sd||9999,price:item.price||0,
     code:item.kaptCode||item.code||name,
   };
@@ -1215,173 +1144,125 @@ function toAptEntry(item){
 
 /* ─── APT_DB 병합 ─── */
 function applyFullDb(){
-  if(!fullDbApts.length) return;
-  const existing=new Set(APT_DB.map(a=>a.n));
-  const newE=fullDbApts.filter(a=>a&&a.n&&!existing.has(a.n));
-  if(newE.length){
-    APT_DB.push(...newE);
-    const r=buildRegionIndex();
-    Object.assign(REGION,r);
-    if(typeof initRegionSection==='function') initRegionSection();
-  }
-  setNavDb('ready',`전국 ${APT_DB.length.toLocaleString()}개`);
+  if(!fullDbApts.length)return;
+  const ex=new Set(APT_DB.map(a=>a.n));
+  const nw=fullDbApts.filter(a=>a&&a.n&&!ex.has(a.n));
+  if(nw.length){APT_DB.push(...nw);}
+  const lbl=`전국 ${APT_DB.length.toLocaleString()}개`;
+  setNavDb(dbDone?'ready':'collecting',lbl);
 }
 
 /* ─── 패널 UI ─── */
-function dbpLog(msg){
-  const el=document.getElementById('dbp-log'); if(!el) return;
-  const d=document.createElement('div');
-  d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
-  el.appendChild(d); el.scrollTop=el.scrollHeight;
-}
-function dbpUpdate(n,page,total,msg){
+function dbpLog(msg){const el=document.getElementById('dbp-log');if(!el)return;const d=document.createElement('div');d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;el.appendChild(d);el.scrollTop=el.scrollHeight;}
+function dbpUpdate(n,pg,tot,msg){
   const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   set('dbp-n',typeof n==='number'?n.toLocaleString():n);
-  set('dbp-page',page); set('dbp-total',total||'?');
+  set('dbp-page',pg);set('dbp-total',tot||'?');
   if(msg){const e=document.getElementById('dbp-msg');if(e)e.textContent=msg;}
-  if(typeof n==='number'&&typeof total==='number'&&total>0){
-    const pct=Math.min(100,Math.round(n/total*100));
-    const bar=document.getElementById('dbp-bar');
-    if(bar) bar.style.width=pct+'%';
-  }
+  if(typeof n==='number'&&tot>0){const bar=document.getElementById('dbp-bar');if(bar)bar.style.width=Math.min(100,Math.round(n/tot*100))+'%';}
 }
-function setNavDb(state,label){
-  const dot=document.getElementById('db-dot');
-  const lbl=document.getElementById('db-label');
-  if(dot) dot.className='db-dot '+(state||'');
-  if(lbl) lbl.textContent=label||'';
+function setNavDb(st,lbl){
+  const dot=document.getElementById('db-dot'),lb=document.getElementById('db-label');
+  if(dot)dot.className='db-dot '+(st||'');if(lb)lb.textContent=lbl||'';
 }
 function showDbPanel(){document.getElementById('db-panel').style.display='flex';}
 function hideDbPanel(){document.getElementById('db-panel').style.display='none';}
 function toggleDbCollect(){
   dbPaused=!dbPaused;
   const btn=document.getElementById('dbp-btn');
-  if(btn) btn.textContent=dbPaused?'▶ 수집 재개':'⏸ 수집 일시정지';
-  if(!dbPaused&&dbCollecting) collectLoop();
+  if(btn)btn.textContent=dbPaused?'▶ 수집 재개':'⏸ 수집 일시정지';
+  if(!dbPaused&&dbCollecting)collectLoop();
 }
 async function clearDbCache(){
-  if(!confirm('캐시를 삭제하고 처음부터 다시 수집합니까?')) return;
-  try{ const db=await openIDB(); await idbClear(db,'apts'); await idbClear(db,'meta'); }catch(e){}
+  if(!confirm('캐시를 초기화하고 다시 수집합니까?'))return;
+  try{const db=await openIDB();await idbClear(db,'apts');await idbClear(db,'meta');}catch(e){}
   location.reload();
 }
 
-/* ─── 메인 수집 루프 ─── */
+/* ─── 수집 루프 ─── */
 async function collectLoop(){
-  const NUM_ROWS = 100;
-  let db;
-  try{ db=await openIDB(); }catch(e){ dbpLog('IDB 오류: '+e.message); return; }
+  const ROWS=100;
+  let db;try{db=await openIDB();}catch(e){dbpLog('IDB 오류:'+e.message);return;}
 
-  // 첫 페이지로 totalCount 파악
-  if(dbTotalCount === 0){
-    dbpLog('전국 단지 수 조회 중…');
-    const first = await fetchOnePage(1, NUM_ROWS);
-    if(!first){ dbpLog('❌ API 응답 없음 — 인증키 확인 필요'); setNavDb('error','API 오류'); return; }
-    dbTotalCount = first.totalCount || 6857;
-    dbpLog(`총 ${dbTotalCount}개 단지 확인. 수집 시작…`);
-    document.getElementById('dbp-total').textContent = dbTotalCount.toLocaleString();
-    // 첫 페이지 데이터 처리
-    if(first.items.length){
-      const entries=first.items.map(toAptEntry).filter(Boolean);
+  // 총 건수 파악 (첫 페이지)
+  if(!dbTotalCount){
+    dbpLog('전체 단지 수 확인 중…');
+    const first=await fetchOnePage(1,ROWS);
+    if(!first){dbpLog('❌ API 응답 없음. 인증키 확인 필요.');setNavDb('error','API 오류');return;}
+    dbTotalCount=first.tc||6857;
+    dbpLog(`전체 ${dbTotalCount}개 확인. 수집 시작!`);
+    document.getElementById('dbp-total').textContent=dbTotalCount.toLocaleString();
+    if(first.arr.length){
+      const entries=first.arr.map(toAptEntry).filter(Boolean);
       fullDbApts.push(...entries);
-      try{ await idbPutAll(db,'apts',first.items.map(i=>({...i,code:i.kaptCode||i.kaptName}))); }catch(e){}
+      try{await idbPutAll(db,'apts',first.arr.map(i=>(({...i,code:i.kaptCode||i.kaptName})))).catch(()=>{});}catch(e){}
+      applyFullDb();
     }
-    dbCurrentPage = 2;
-    applyFullDb();
-    dbpUpdate(fullDbApts.length, 1, dbTotalCount, `수집 중… 1/${Math.ceil(dbTotalCount/NUM_ROWS)}페이지`);
+    dbCurrentPage=2;
   }
 
-  const totalPages = Math.ceil(dbTotalCount / NUM_ROWS);
-
-  // 나머지 페이지 수집
-  while(dbCollecting && !dbPaused && dbCurrentPage <= totalPages){
-    const page = dbCurrentPage;
+  const totalPages=Math.ceil(dbTotalCount/ROWS);
+  while(dbCollecting&&!dbPaused&&dbCurrentPage<=totalPages){
+    const pg=dbCurrentPage;
     try{
-      const result = await fetchOnePage(page, NUM_ROWS);
-      if(!result){ dbpLog(`페이지 ${page} 실패 — 재시도`); await sleep(2000); continue; }
-
-      if(result.items.length){
-        const entries=result.items.map(toAptEntry).filter(Boolean);
+      const r=await fetchOnePage(pg,ROWS);
+      if(!r){await sleep(2000);continue;}
+      if(r.arr.length){
+        const entries=r.arr.map(toAptEntry).filter(Boolean);
         fullDbApts.push(...entries);
-        try{ await idbPutAll(db,'apts',result.items.map(i=>({...i,code:i.kaptCode||i.kaptName}))); }catch(e){}
+        try{await idbPutAll(db,'apts',r.arr.map(i=>(({...i,code:i.kaptCode||i.kaptName})))).catch(()=>{});}catch(e){}
       }
-
       dbCurrentPage++;
-      dbpUpdate(fullDbApts.length, page, dbTotalCount,
-        `수집 중… ${page}/${totalPages}페이지 (${fullDbApts.length}개)`);
-      if(page%10===0||page===1) dbpLog(`${page}/${totalPages}페이지 — ${fullDbApts.length}개`);
-
-      // 50페이지마다 DB 반영
-      if(page%50===0) applyFullDb();
-
-      await sleep(120); // 초당 ~8 요청
-
-    }catch(e){ dbpLog('오류: '+e.message); await sleep(1000); }
+      dbpUpdate(fullDbApts.length,pg,dbTotalCount,`수집 중… ${pg}/${totalPages}페이지`);
+      if(pg%20===0){applyFullDb();dbpLog(`${pg}/${totalPages} — ${fullDbApts.length}개`);}
+      await sleep(100);
+    }catch(e){dbpLog('오류:'+e.message);await sleep(1000);}
   }
 
-  // 완료
-  if(!dbPaused && dbCurrentPage > totalPages){
-    dbFetchedAll = true;
-    dbCollecting = false;
-    try{
-      await idbPutAll(db,'meta',[
-        {code:'done',val:'1'},{code:'count',val:String(fullDbApts.length)},
-        {code:'date',val:new Date().toISOString()},{code:'ver',val:String(FULL_DB_VERSION)},
-      ]);
-    }catch(e){}
+  if(!dbPaused&&dbCurrentPage>totalPages){
+    dbDone=true;dbCollecting=false;
+    try{await idbPutAll(db,'meta',[{code:'done',val:'1'},{code:'count',val:String(fullDbApts.length)},{code:'date',val:new Date().toISOString()},{code:'ver',val:'4'}]).catch(()=>{});}catch(e){}
     applyFullDb();
-    dbpUpdate(fullDbApts.length,'완료',dbTotalCount,`✅ ${fullDbApts.length}개 수집 완료!`);
-    dbpLog(`✅ 전국 ${fullDbApts.length}개 수집 완료 → APT_DB: ${APT_DB.length}개`);
-    setNavDb('ready',`전국 ${APT_DB.length.toLocaleString()}개 ✓`);
-    toast(`✅ 전국 ${APT_DB.length.toLocaleString()}개 아파트 검색 준비!`,'inf');
+    dbpUpdate(fullDbApts.length,'완료',dbTotalCount,`✅ ${fullDbApts.length}개 완료!`);
+    dbpLog(`✅ 전국 ${fullDbApts.length}개 수집 완료`);
+    toast(`✅ 전국 ${APT_DB.length.toLocaleString()}개 검색 가능!`,'inf');
   }
 }
 
-/* ─── 초기화: 캐시 확인 → 없으면 수집 ─── */
+/* ─── 초기화 ─── */
 async function initFullDb(){
   setNavDb('collecting','DB 로딩 중…');
-  let db;
-  try{ db=await openIDB(); }catch(e){ setNavDb('error','IDB 불가'); return; }
-
+  let db;try{db=await openIDB();}catch(e){setNavDb('error','IDB 불가');return;}
   try{
-    const done  = await idbGet(db,'meta','done').catch(()=>null);
-    const verM  = await idbGet(db,'meta','ver').catch(()=>null);
-    const valid = done?.val==='1' && parseInt(verM?.val||'0')>=FULL_DB_VERSION;
-
-    if(valid){
-      const cached = await idbGetAll(db,'apts');
+    const done=await idbGet(db,'meta','done').catch(()=>null);
+    const ver =await idbGet(db,'meta','ver' ).catch(()=>null);
+    if(done?.val==='1'&&parseInt(ver?.val||'0')>=4){
+      const cached=await idbGetAll(db,'apts').catch(()=>[]);
       if(cached.length>500){
-        fullDbApts = cached.map(toAptEntry).filter(Boolean);
-        applyFullDb();
+        fullDbApts=cached.map(toAptEntry).filter(Boolean);
+        applyFullDb();dbDone=true;
         dbpLog(`💾 캐시 로드: ${cached.length}개`);
         dbpUpdate(fullDbApts.length,'캐시','—','캐시에서 로드 완료');
         return;
       }
     }
-  }catch(e){ dbpLog('캐시 확인 오류: '+e.message); }
-
+  }catch(e){}
   // 이전 진행분 이어받기
   try{
-    const cached = await idbGetAll(db,'apts');
+    const cached=await idbGetAll(db,'apts').catch(()=>[]);
     if(cached.length>50){
-      fullDbApts = cached.map(toAptEntry).filter(Boolean);
+      fullDbApts=cached.map(toAptEntry).filter(Boolean);
       applyFullDb();
-      dbCurrentPage = Math.floor(cached.length/100)+1;
-      dbTotalCount  = Math.max(cached.length+100, 6857);
-      dbpLog(`이전 ${cached.length}개 로드 → 페이지 ${dbCurrentPage}부터 이어서 수집`);
+      dbCurrentPage=Math.floor(cached.length/100)+1;
+      dbTotalCount=Math.max(cached.length+100,6857);
+      dbpLog(`이전 ${cached.length}개 → 페이지 ${dbCurrentPage}부터 재개`);
     }
   }catch(e){}
-
-  dbCollecting = true;
+  dbCollecting=true;
   setNavDb('collecting','수집 중…');
-  dbpUpdate(fullDbApts.length, dbCurrentPage,'?','수집 시작…');
+  dbpUpdate(fullDbApts.length,dbCurrentPage,'?','수집 시작…');
   collectLoop();
 }
-
-/* ─── 전역 apt 인덱스 맵 ─── */
-const _AMAP=[];
-function _aptIdx(apt){ _AMAP.push(apt); return _AMAP.length-1; }
-function pickIdx(i){ const a=_AMAP[i]; if(a) pickApt(a); }
-function clearAmap(){ _AMAP.length=0; }
 
 const APT_DB=[
   /* ── 강원도 ── */
@@ -1937,57 +1818,39 @@ function findSimilar(q){
 function searchAC(q){
   if(!q||q.length<1) return[];
   const qn=q.replace(/\s+/g,'');
-  const seen=new Set(), res=[];
+  const tokens=q.trim().split(/\s+/).filter(Boolean);
+  const seen=new Set(),res=[];
 
-  // 토큰 분리: "검단 호반써밋" → ["검단","호반써밋"]
-  const tokens=q.trim().split(/\s+/).map(t=>t.replace(/\s/g,''));
+  // 검색 대상: 정적DB + 수집된 전국DB 합산
+  const allSrc=[...APT_DB,...fullDbApts.filter(a=>!APT_DB.some(d=>d.n===a.n))];
 
-  for(const a of APT_DB){
-    if(seen.has(a.n)) continue;
-    const name=a.n.replace(/\s+/g,'');
-    const gu  =a.gu.replace(/\s+/g,'');
-    const dong=a.dong.replace(/\s+/g,'');
-    const city=a.city.replace(/\s+/g,'');
-    const keys=(a.k||[]).map(s=>s.replace(/\s+/g,''));
-    const allText=[name,gu,dong,city,...keys].join(' ');
+  for(const a of allSrc){
+    if(seen.has(a.n))continue;
+    const nn=a.n.replace(/\s+/g,'');
+    const gu=(a.gu||'').replace(/\s+/g,'');
+    const dong=(a.dong||'').replace(/\s+/g,'');
+    const city=(a.city||'').replace(/\s+/g,'');
+    const kws=(a.k||[]).map(k=>k.replace(/\s+/g,''));
+    const all=nn+gu+dong+city+kws.join('');
 
-    // 1) 완전 일치
-    if(name===qn||keys.some(k=>k===qn)){seen.add(a.n);a._score=100;res.push(a);continue;}
-    // 2) 이름 시작 일치
-    if(name.startsWith(qn)){seen.add(a.n);a._score=90;res.push(a);continue;}
-    // 3) 이름 포함
-    if(name.includes(qn)){seen.add(a.n);a._score=80;res.push(a);continue;}
-    // 4) 쿼리가 이름에 포함
-    if(qn.includes(name)&&name.length>=2){seen.add(a.n);a._score=70;res.push(a);continue;}
-    // 5) 모든 토큰이 name/gu/dong에 포함 (호갱노노식: "검단 호반써밋" → 검단이 gu/dong, 호반써밋이 name에)
-    if(tokens.length>=2){
-      const allMatch=tokens.every(t=>allText.replace(/\s/g,'').includes(t));
-      if(allMatch){seen.add(a.n);a._score=75;res.push(a);continue;}
-      // 지역 토큰 + 브랜드 토큰 분리 매칭
-      const locTokens=tokens.filter(t=>gu.includes(t)||dong.includes(t)||city.includes(t));
-      const nameTokens=tokens.filter(t=>name.includes(t)||keys.some(k=>k.includes(t)));
-      if(locTokens.length>0&&nameTokens.length>0){seen.add(a.n);a._score=72;res.push(a);continue;}
+    let score=0;
+    if(nn===qn||kws.includes(qn))score=100;
+    else if(nn.startsWith(qn))score=90;
+    else if(nn.includes(qn))score=80;
+    else if(qn.length>=2&&qn.includes(nn))score=70;
+    else if(tokens.length>=2&&tokens.every(t=>all.includes(t)))score=75;
+    else if(tokens.length>=2){
+      const loc=tokens.filter(t=>gu.includes(t)||dong.includes(t)||city.includes(t));
+      const nm=tokens.filter(t=>nn.includes(t)||kws.some(k=>k.includes(t)));
+      if(loc.length>0&&nm.length>0)score=72;
     }
-    // 6) keywords 포함
-    if(keys.some(k=>k.includes(qn)||qn.includes(k))){seen.add(a.n);a._score=60;res.push(a);continue;}
-    // 7) 동/구 + 이름 부분 일치
-    if((dong.includes(qn)||gu.includes(qn))&&tokens.some(t=>name.includes(t))){
-      seen.add(a.n);a._score=55;res.push(a);continue;
-    }
-    // 8) 지역명 단독 검색 (강남, 동탄, 판교 등 지역으로 찾기)
-    if(tokens.length===1&&(dong.includes(qn)||gu.includes(qn)||city.includes(qn))){
-      seen.add(a.n);a._score=40;res.push(a);continue;
-    }
-    // 9) 이름의 2글자 이상 부분 포함 (오타/부분검색 관대하게)
-    if(qn.length>=2){
-      const sub2=name.length>=3?name.slice(0,name.length-1):'';
-      if(sub2&&qn.includes(sub2)){seen.add(a.n);a._score=35;res.push(a);continue;}
-    }
+    else if(kws.some(k=>k.includes(qn)||qn.includes(k)))score=60;
+    else if(tokens.length===1&&(dong.includes(qn)||gu.includes(qn)||city.includes(qn)))score=40;
+
+    if(score>0){seen.add(a.n);a._score=score;res.push(a);}
   }
-
-  // 점수 + 이름 길이 정렬 (짧을수록 더 정확한 매칭)
   res.sort((a,b)=>(b._score||0)-(a._score||0)||(a.n.length-b.n.length));
-  return res.slice(0,12);
+  return res.slice(0,15);
 }
 
 /* ══════════════════════════════════════════
@@ -2016,6 +1879,89 @@ const PRICE_MAP={
   '부천시':2600,'시흥시':2200,'안양시':2800,'광명시':2800,
   '해운대구':4000,'동래구':2800,'수성구':3200,'연제구':2500,'수영구':3000,
   '세종시':2800,'서구':1900,'남구':1900,'북구':2000,
+};
+
+const GU_HUBS={
+/* ══ 서울 ══ */
+'서울|종로구':[{n:'광화문역',la:37.5752,lo:126.9769,w:3},{n:'경복궁역',la:37.5792,lo:126.9769,w:2},{n:'종각역',la:37.5700,lo:126.9824,w:3}],
+'서울|중구':[{n:'시청역',la:37.5656,lo:126.9768,w:3},{n:'명동역',la:37.5607,lo:126.9854,w:3},{n:'동대문역',la:37.5713,lo:127.0097,w:2}],
+'서울|용산구':[{n:'용산역',la:37.5298,lo:126.9648,w:3},{n:'이태원역',la:37.5344,lo:126.9944,w:2},{n:'한강진역',la:37.5385,lo:126.9994,w:2}],
+'서울|성동구':[{n:'왕십리역',la:37.5613,lo:127.0374,w:3},{n:'성수역',la:37.5445,lo:127.0557,w:3},{n:'뚝섬역',la:37.5472,lo:127.0472,w:2}],
+'서울|광진구':[{n:'건대입구역',la:37.5403,lo:127.0699,w:3},{n:'강변역',la:37.5347,lo:127.0937,w:3},{n:'구의역',la:37.5377,lo:127.0845,w:2}],
+'서울|동대문구':[{n:'청량리역',la:37.5802,lo:127.0472,w:3},{n:'회기역',la:37.5891,lo:127.0575,w:2},{n:'제기동역',la:37.5840,lo:127.0421,w:2}],
+'서울|중랑구':[{n:'상봉역',la:37.5960,lo:127.0848,w:3},{n:'면목역',la:37.5839,lo:127.0822,w:2},{n:'중화역',la:37.6002,lo:127.0786,w:2}],
+'서울|성북구':[{n:'길음역',la:37.6031,lo:127.0248,w:3},{n:'돈암역',la:37.5939,lo:127.0176,w:2},{n:'성신여대입구역',la:37.5924,lo:127.0165,w:3}],
+'서울|강북구':[{n:'미아사거리역',la:37.6246,lo:127.0276,w:3},{n:'수유역',la:37.6378,lo:127.0253,w:3},{n:'미아역',la:37.6301,lo:127.0292,w:2}],
+'서울|도봉구':[{n:'도봉산역',la:37.6888,lo:127.0472,w:3},{n:'창동역',la:37.6527,lo:127.0476,w:3},{n:'방학역',la:37.6700,lo:127.0459,w:2}],
+'서울|노원구':[{n:'노원역',la:37.6556,lo:127.0564,w:3},{n:'중계역',la:37.6479,lo:127.0765,w:2},{n:'하계역',la:37.6432,lo:127.0717,w:2}],
+'서울|은평구':[{n:'연신내역',la:37.6188,lo:126.9218,w:3},{n:'불광역',la:37.6105,lo:126.9290,w:3},{n:'응암역',la:37.6046,lo:126.9149,w:2}],
+'서울|서대문구':[{n:'신촌역',la:37.5553,lo:126.9367,w:3},{n:'홍제역',la:37.5837,lo:126.9443,w:2},{n:'이대역',la:37.5561,lo:126.9464,w:2}],
+'서울|마포구':[{n:'홍대입구역',la:37.5572,lo:126.9247,w:3},{n:'합정역',la:37.5499,lo:126.9148,w:3},{n:'마포역',la:37.5391,lo:126.9497,w:2}],
+'서울|양천구':[{n:'목동역',la:37.5261,lo:126.8750,w:3},{n:'오목교역',la:37.5255,lo:126.8670,w:2},{n:'신정네거리역',la:37.5228,lo:126.8648,w:2}],
+'서울|강서구':[{n:'발산역',la:37.5585,lo:126.8378,w:3},{n:'마곡나루역',la:37.5697,lo:126.8305,w:3},{n:'화곡역',la:37.5433,lo:126.8490,w:2}],
+'서울|구로구':[{n:'구로역',la:37.5034,lo:126.8820,w:3},{n:'신도림역',la:37.5087,lo:126.8913,w:3},{n:'개봉역',la:37.4906,lo:126.8582,w:2}],
+'서울|금천구':[{n:'독산역',la:37.4792,lo:126.9000,w:2},{n:'가산디지털단지역',la:37.4810,lo:126.8825,w:3},{n:'석수역',la:37.4653,lo:126.9019,w:2}],
+'서울|영등포구':[{n:'영등포역',la:37.5159,lo:126.9063,w:3},{n:'여의도역',la:37.5215,lo:126.9243,w:3},{n:'당산역',la:37.5339,lo:126.9012,w:2}],
+'서울|동작구':[{n:'노량진역',la:37.5137,lo:126.9422,w:3},{n:'사당역',la:37.4764,lo:126.9814,w:3},{n:'이수역',la:37.4873,lo:126.9826,w:2}],
+'서울|관악구':[{n:'서울대입구역',la:37.4810,lo:126.9527,w:3},{n:'봉천역',la:37.4878,lo:126.9587,w:2},{n:'신림역',la:37.4846,lo:126.9294,w:3}],
+'서울|서초구':[{n:'강남역',la:37.4979,lo:127.0276,w:3},{n:'교대역',la:37.4934,lo:127.0138,w:3},{n:'반포역',la:37.5068,lo:127.0060,w:2},{n:'양재역',la:37.4845,lo:127.0343,w:3}],
+'서울|강남구':[{n:'강남역',la:37.4979,lo:127.0276,w:3},{n:'선릉역',la:37.5040,lo:127.0489,w:3},{n:'삼성역',la:37.5089,lo:127.0633,w:3},{n:'역삼역',la:37.5006,lo:127.0366,w:2}],
+'서울|송파구':[{n:'잠실역',la:37.5133,lo:127.1000,w:3},{n:'석촌역',la:37.5042,lo:127.1063,w:2},{n:'복정역',la:37.4851,lo:127.1265,w:2},{n:'가락시장역',la:37.4924,lo:127.1176,w:2}],
+'서울|강동구':[{n:'강동역',la:37.5307,lo:127.1257,w:3},{n:'천호역',la:37.5387,lo:127.1234,w:3},{n:'둔촌동역',la:37.5200,lo:127.1408,w:2},{n:'명일역',la:37.5476,lo:127.1381,w:2}],
+/* ══ 경기 ══ */
+'경기|수원시':[{n:'수원역',la:37.2663,lo:127.0003,w:3},{n:'성균관대역',la:37.2920,lo:127.0130,w:2},{n:'화서역',la:37.2844,lo:126.9800,w:2}],
+'경기|성남시':[{n:'판교역',la:37.3954,lo:127.1113,w:3},{n:'야탑역',la:37.4121,lo:127.1272,w:3},{n:'모란역',la:37.4338,lo:127.1291,w:2}],
+'경기|고양시':[{n:'대화역',la:37.6706,lo:126.7601,w:3},{n:'화정역',la:37.6322,lo:126.8323,w:3},{n:'원당역',la:37.6527,lo:126.8407,w:2}],
+'경기|용인시':[{n:'죽전역',la:37.3228,lo:127.1093,w:3},{n:'기흥역',la:37.2802,lo:127.1148,w:3},{n:'수지구청역',la:37.3251,lo:127.0944,w:2}],
+'경기|부천시':[{n:'부천역',la:37.5029,lo:126.7828,w:3},{n:'상동역',la:37.5052,lo:126.7878,w:2},{n:'소사역',la:37.4834,lo:126.7908,w:2}],
+'경기|안산시':[{n:'중앙역',la:37.3159,lo:126.8289,w:3},{n:'고잔역',la:37.3218,lo:126.8235,w:2},{n:'초지역',la:37.3098,lo:126.8195,w:2}],
+'경기|남양주시':[{n:'별내역',la:37.6432,lo:127.1400,w:3},{n:'다산역',la:37.6065,lo:127.2150,w:2},{n:'양정역',la:37.6560,lo:127.1760,w:2}],
+'경기|화성시':[{n:'동탄역',la:37.2003,lo:127.0713,w:3},{n:'병점역',la:37.2148,lo:127.0040,w:2},{n:'서동탄역',la:37.2244,lo:127.0290,w:2}],
+'경기|평택시':[{n:'평택역',la:36.9928,lo:127.0928,w:3},{n:'지제역',la:37.0500,lo:127.1000,w:2},{n:'서정리역',la:37.0700,lo:127.0700,w:2}],
+'경기|시흥시':[{n:'정왕역',la:37.3490,lo:126.7360,w:3},{n:'오이도역',la:37.3420,lo:126.7290,w:2},{n:'월곶역',la:37.3780,lo:126.7410,w:2}],
+'경기|파주시':[{n:'운정역',la:37.7150,lo:126.7550,w:3},{n:'야당역',la:37.7095,lo:126.7531,w:2},{n:'금릉역',la:37.7480,lo:126.7610,w:2}],
+'경기|의정부시':[{n:'의정부역',la:37.7382,lo:127.0445,w:3},{n:'회룡역',la:37.7062,lo:127.0516,w:2},{n:'가능역',la:37.7315,lo:127.0540,w:2}],
+'경기|김포시':[{n:'장기역',la:37.6355,lo:126.7190,w:3},{n:'걸포북변역',la:37.6073,lo:126.7495,w:2},{n:'구래역',la:37.6190,lo:126.7360,w:2}],
+'경기|광주시':[{n:'경강역',la:37.4080,lo:127.2440,w:3},{n:'초월역',la:37.3730,lo:127.2350,w:2}],
+'경기|하남시':[{n:'미사역',la:37.5520,lo:127.2090,w:3},{n:'덕풍역',la:37.5460,lo:127.2000,w:2}],
+'경기|광명시':[{n:'광명역',la:37.4295,lo:126.8645,w:3},{n:'철산역',la:37.4790,lo:126.8667,w:2}],
+'경기|군포시':[{n:'산본역',la:37.3615,lo:126.9250,w:3},{n:'금정역',la:37.3741,lo:126.9322,w:2}],
+'경기|안양시':[{n:'안양역',la:37.3962,lo:126.9570,w:3},{n:'범계역',la:37.3930,lo:126.9360,w:3},{n:'평촌역',la:37.3915,lo:126.9498,w:2}],
+'경기|이천시':[{n:'이천역',la:37.2740,lo:127.4440,w:3}],
+'경기|양주시':[{n:'양주역',la:37.7850,lo:127.0460,w:3},{n:'덕계역',la:37.7700,lo:127.0560,w:2}],
+/* ══ 인천 ══ */
+'인천|남동구':[{n:'인천터미널역',la:37.4527,lo:126.7212,w:3},{n:'인천시청역',la:37.4567,lo:126.7058,w:3}],
+'인천|부평구':[{n:'부평역',la:37.5012,lo:126.7218,w:3},{n:'부평구청역',la:37.5080,lo:126.7267,w:2}],
+'인천|계양구':[{n:'계산역',la:37.5397,lo:126.7384,w:3},{n:'귤현역',la:37.5709,lo:126.7249,w:2}],
+'인천|서구':[{n:'검단역',la:37.5850,lo:126.7040,w:3},{n:'완정역',la:37.5680,lo:126.7300,w:2},{n:'가정역',la:37.5456,lo:126.6773,w:2}],
+'인천|연수구':[{n:'송도역',la:37.3847,lo:126.6564,w:3},{n:'인하대역',la:37.4499,lo:126.6570,w:2}],
+'인천|미추홀구':[{n:'인하대역',la:37.4499,lo:126.6570,w:3},{n:'주안역',la:37.4740,lo:126.7050,w:3}],
+/* ══ 부산 ══ */
+'부산|해운대구':[{n:'해운대역',la:35.1636,lo:129.1645,w:3},{n:'센텀시티역',la:35.1690,lo:129.1328,w:3},{n:'벡스코역',la:35.1699,lo:129.1283,w:2}],
+'부산|수영구':[{n:'수영역',la:35.1686,lo:129.1135,w:3},{n:'광안역',la:35.1569,lo:129.1180,w:2}],
+'부산|부산진구':[{n:'서면역',la:35.1580,lo:129.0591,w:3},{n:'부전역',la:35.1650,lo:129.0535,w:2}],
+'부산|동래구':[{n:'동래역',la:35.1973,lo:129.0813,w:3},{n:'온천장역',la:35.2050,lo:129.0870,w:2}],
+'부산|남구':[{n:'경성대부경대역',la:35.1400,lo:129.0840,w:3},{n:'대연역',la:35.1350,lo:129.0810,w:2}],
+'부산|사하구':[{n:'당리역',la:35.1051,lo:128.9847,w:3},{n:'하단역',la:35.1048,lo:128.9616,w:3}],
+'부산|강서구':[{n:'명지역',la:35.1050,lo:128.9350,w:3}],
+/* ══ 대구 ══ */
+'대구|수성구':[{n:'수성구민운동장역',la:35.8548,lo:128.6284,w:3},{n:'황금역',la:35.8680,lo:128.6360,w:2},{n:'범물역',la:35.8260,lo:128.6540,w:2}],
+'대구|달서구':[{n:'죽전역',la:35.8490,lo:128.5700,w:3},{n:'감삼역',la:35.8598,lo:128.5588,w:2}],
+'대구|북구':[{n:'칠곡경대병원역',la:35.9320,lo:128.5730,w:3},{n:'팔달역',la:35.8980,lo:128.5720,w:2}],
+'대구|중구':[{n:'반월당역',la:35.8683,lo:128.5942,w:3},{n:'중앙로역',la:35.8720,lo:128.5954,w:2}],
+/* ══ 광주 ══ */
+'광주|광산구':[{n:'송정리역',la:35.1393,lo:126.7934,w:3},{n:'수완역',la:35.1760,lo:126.8270,w:2}],
+'광주|서구':[{n:'상무역',la:35.1510,lo:126.8510,w:3},{n:'화정역',la:35.1497,lo:126.8726,w:2}],
+'광주|남구':[{n:'진월역',la:35.1280,lo:126.9120,w:3}],
+/* ══ 대전 ══ */
+'대전|서구':[{n:'정부청사역',la:36.3616,lo:127.3770,w:3},{n:'갈마역',la:36.3558,lo:127.3613,w:2}],
+'대전|유성구':[{n:'유성온천역',la:36.3890,lo:127.3320,w:3},{n:'노은역',la:36.4141,lo:127.3401,w:2}],
+/* ══ 울산 ══ */
+'울산|남구':[{n:'태화강역',la:35.5387,lo:129.3324,w:3}],
+/* ══ 세종 ══ */
+'세종|세종시':[{n:'세종시청',la:36.4801,lo:127.2890,w:3}],
+/* ══ 경기 기본 ══ */
+'경기|경기':[{n:'수원역',la:37.2663,lo:127.0003,w:1}],
 };
 
 function scoreHubs(la,lo,apt){
