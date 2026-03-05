@@ -614,7 +614,10 @@ body::after{
     <div class="nav-logo-mark">🏙️</div>
     <span>Apt<span>Score</span></span>
   </a>
-
+  <div class="nav-db-status" id="nav-db-status" onclick="showDbPanel()" title="전국 DB 상태 클릭">
+    <span class="db-dot" id="db-dot"></span>
+    <span id="db-label">DB 초기화 중…</span>
+  </div>
 </nav>
 <style>
 /* ── 자동완성 개선 ── */
@@ -767,8 +770,57 @@ body::after{
   border:1px solid rgba(201,168,76,.2);
 }
 
+
+/* ── nav DB 상태 뱃지 ── */
+.nav-db-status{
+  display:flex;align-items:center;gap:7px;
+  margin-left:auto;padding:6px 14px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:20px;cursor:pointer;transition:all .15s;
+  font-size:12px;font-weight:600;color:var(--g3);
+}
+.nav-db-status:hover{border-color:rgba(201,168,76,.4);color:var(--gold);}
+.db-dot{width:7px;height:7px;border-radius:50%;background:var(--g3);flex-shrink:0;transition:background .3s;}
+.db-dot.collecting{background:#f59e0b;animation:blink .8s infinite;}
+.db-dot.ready{background:#10b981;}
+.db-dot.error{background:#f43f5e;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
+
 </style>
 <!-- ══ HERO ══ -->
+
+<!-- ══ 전국 DB 수집 패널 ══ -->
+<div id="db-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:8000;align-items:center;justify-content:center;">
+  <div style="background:#0d1117;border:1px solid rgba(201,168,76,.3);border-radius:16px;padding:32px;width:min(520px,92vw);max-height:80vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="font-size:18px;font-weight:800;color:var(--gold);">📡 전국 아파트 DB</div>
+      <button onclick="hideDbPanel()" style="background:none;border:none;color:var(--g3);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div id="dbp-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;">
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:20px;font-weight:800;color:var(--gold);" id="dbp-n">0</div>
+        <div style="font-size:11px;color:var(--g3);">수집된 단지</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:20px;font-weight:800;color:#10b981;" id="dbp-page">0</div>
+        <div style="font-size:11px;color:var(--g3);">진행 페이지</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;">
+        <div style="font-size:20px;font-weight:800;color:#60a5fa;" id="dbp-total">?</div>
+        <div style="font-size:11px;color:var(--g3);">전체 단지</div>
+      </div>
+    </div>
+    <div style="background:rgba(255,255,255,.04);border-radius:8px;height:8px;margin-bottom:8px;overflow:hidden;">
+      <div id="dbp-bar" style="height:100%;background:linear-gradient(90deg,var(--gold),#10b981);border-radius:8px;transition:width .4s;width:0%;"></div>
+    </div>
+    <div id="dbp-msg" style="font-size:12px;color:var(--g3);margin-bottom:16px;">준비 중…</div>
+    <div id="dbp-log" style="max-height:150px;overflow-y:auto;background:rgba(0,0,0,.4);border-radius:6px;padding:10px;font-size:11px;font-family:monospace;color:rgba(255,255,255,.4);"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button id="dbp-btn" onclick="toggleDbCollect()" style="flex:1;padding:10px;background:linear-gradient(135deg,var(--gold),#a8722a);color:#07090f;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">⏸ 수집 일시정지</button>
+      <button onclick="clearDbCache()" style="padding:10px 16px;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.3);color:#f43f5e;border-radius:8px;font-size:12px;cursor:pointer;">🗑 캐시 초기화</button>
+    </div>
+  </div>
+</div>
 <section class="hero" id="heroSec">
   <div class="hero-badge"><div class="hero-badge-dot"></div>전국 아파트 · 카카오 지도 API 연동</div>
   <h1 class="hero-h1">당신의 아파트,<br><em>지금 몇 점인가요?</em></h1>
@@ -948,6 +1000,353 @@ body::after{
 
 <div class="toast" id="toast"></div>
 <script>
+
+/* ══════════════════════════════════════════════════════
+   전국 아파트 DB 수집 시스템
+   - IndexedDB 캐시 (재방문 시 즉시 로드)
+   - JSONP로 CORS 우회
+   - 수집 중에도 기존 DB 검색 가능
+   - 완료 시 APT_DB 자동 교체
+══════════════════════════════════════════════════════ */
+const FULL_DB_VERSION = 1;
+const IDB_NAME = 'aptscoreDB';
+const IDB_STORE = 'apts';
+let fullDbApts = [];       // 수집된 전체 단지
+let dbCollecting = false;
+let dbPaused = false;
+let dbCurrentPage = 1;
+let dbTotalPages = 0;
+let dbTotalCount = 0;
+
+// ── IndexedDB 헬퍼 ──
+function openIDB(){
+  return new Promise((res,rej)=>{
+    const req = indexedDB.open(IDB_NAME, FULL_DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE))
+        db.createObjectStore(IDB_STORE, {keyPath:'code'});
+      if(!db.objectStoreNames.contains('meta'))
+        db.createObjectStore('meta');
+    };
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+async function idbGet(db, store, key){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = ()=>res(req.result);
+    req.onerror   = ()=>rej(req.error);
+  });
+}
+async function idbPutAll(db, store, items){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readwrite');
+    const os = tx.objectStore(store);
+    for(const item of items) os.put(item);
+    tx.oncomplete = ()=>res();
+    tx.onerror    = ()=>rej(tx.error);
+  });
+}
+async function idbGetAll(db, store){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = ()=>res(req.result||[]);
+    req.onerror   = ()=>rej(req.error);
+  });
+}
+async function idbClear(db, store){
+  return new Promise((res,rej)=>{
+    const tx = db.transaction(store,'readwrite');
+    tx.objectStore(store).clear();
+    tx.oncomplete = ()=>res();
+    tx.onerror    = ()=>rej(tx.error);
+  });
+}
+
+// ── JSONP 단일 페이지 호출 ──
+function fetchAptListPage(page, numOfRows){
+  return new Promise(resolve=>{
+    const cb = '_aptlist_p'+page+'_'+Date.now();
+    const timer = setTimeout(()=>{ cleanup(); resolve([]); }, 12000);
+    function cleanup(){ clearTimeout(timer); delete window[cb]; const s=document.getElementById(cb); if(s)s.remove(); }
+    window[cb] = function(data){
+      cleanup();
+      try{
+        const body = data?.body || data?.response?.body || {};
+        const tc   = parseInt(body.totalCount||'0');
+        const items= body.items||[];
+        const arr  = Array.isArray(items)?items:(items.item?[].concat(items.item):[]);
+        resolve({items:arr, totalCount:tc});
+      }catch{ resolve({items:[], totalCount:0}); }
+    };
+    const key = CFG.molit;
+    const url = `https://apis.data.go.kr/1613000/AptListService2/getAptList`+
+      `?serviceKey=${key}&pageNo=${page}&numOfRows=${numOfRows}&_callback=${cb}&type=json`;
+    const s = document.createElement('script');
+    s.id = cb; s.src = url;
+    s.onerror = ()=>{ cleanup(); resolve({items:[], totalCount:0}); };
+    document.head.appendChild(s);
+  });
+}
+
+// ── 시도별 대표 좌표 ──
+const SIDO_COORD = {
+  '서울':    [37.5665,126.9780], '부산':   [35.1796,129.0756],
+  '대구':    [35.8714,128.6014], '인천':   [37.4563,126.7052],
+  '광주':    [35.1595,126.8526], '대전':   [36.3504,127.3845],
+  '울산':    [35.5384,129.3114], '세종':   [36.4801,127.2890],
+  '경기':    [37.4138,127.5183], '강원':   [37.8228,128.1555],
+  '충북':    [36.6357,127.4912], '충남':   [36.5184,126.8000],
+  '전북':    [35.7167,127.1442], '전남':   [34.8679,126.9910],
+  '경북':    [36.4919,128.8889], '경남':   [35.2388,128.6922],
+  '제주':    [33.4890,126.4983],
+};
+
+// 시도명 정규화
+function normCity(s){
+  if(!s) return '기타';
+  return s.replace('특별시','').replace('광역시','').replace('특별자치시','')
+           .replace('특별자치도','').replace('도','').replace('시$','').trim();
+}
+
+// DB 아이템 → APT_DB 항목 변환
+function toAptEntry(item){
+  const city  = normCity(item.as1);
+  const gu    = (item.as2||'').trim() || city;
+  const dong  = (item.as3||'').trim();
+  const name  = (item.kaptName||item.name||'').trim();
+  if(!name) return null;
+  const [blat,blon] = SIDO_COORD[city]||[37.5665,126.9780];
+  // 좌표는 캐시된 값 우선, 없으면 도시 기준 ±0.15 랜덤 오프셋
+  const la = item.la || (blat + (seededRand(name+'la')-0.5)*0.3);
+  const lo = item.lo || (blon + (seededRand(name+'lo')-0.5)*0.3);
+  // 키워드 생성
+  const kws = makeKws(name);
+  return {
+    k:kws, n:name, city, gu, dong,
+    a:`${city} ${gu} ${dong}`.trim(),
+    la:+la.toFixed(4), lo:+lo.toFixed(4),
+    yr: item.yr||0, st: item.st||'', sd: item.sd||9999, price: item.price||0,
+    code: item.code||item.kaptCode||name,
+  };
+}
+
+function makeKws(name){
+  const set = new Set([name]);
+  const brands=['호반써밋','래미안','자이','아이파크','힐스테이트','푸르지오',
+    'e편한세상','롯데캐슬','더샵','SK뷰','리센츠','엘스','파크리오','위브','두산','한양수자인'];
+  for(const b of brands){
+    if(name.includes(b)){
+      const pre=name.slice(0,name.indexOf(b)).trim();
+      if(pre) set.add(pre);
+      set.add(b);
+    }
+  }
+  const words=name.match(/[가-힣]+/g)||[];
+  if(words.length>=2) set.add(words.slice(0,2).join(''));
+  return [...set];
+}
+
+// 결정론적 유사 난수 (좌표 분산용)
+function seededRand(seed){
+  let h=0;
+  for(let i=0;i<seed.length;i++) h=Math.imul(31,h)+seed.charCodeAt(i)|0;
+  return ((h>>>0)/4294967296);
+}
+
+// ── 패널 로그 ──
+function dbpLog(msg){
+  const el=document.getElementById('dbp-log');
+  if(!el) return;
+  const d=document.createElement('div');
+  d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(d); el.scrollTop=el.scrollHeight;
+}
+function dbpUpdate(n, page, total, msg){
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  set('dbp-n', n.toLocaleString());
+  set('dbp-page', page);
+  set('dbp-total', total||'?');
+  if(msg) { const e=document.getElementById('dbp-msg'); if(e)e.textContent=msg; }
+  const pct = total>0?Math.round(page/(Math.ceil(total/100))*100):0;
+  const bar=document.getElementById('dbp-bar'); if(bar) bar.style.width=Math.min(pct,100)+'%';
+}
+function setNavDb(state, label){
+  const dot=document.getElementById('db-dot');
+  const lbl=document.getElementById('db-label');
+  if(dot){ dot.className='db-dot '+(state||''); }
+  if(lbl) lbl.textContent=label||'';
+}
+
+// ── 패널 열기/닫기 ──
+function showDbPanel(){ document.getElementById('db-panel').style.display='flex'; }
+function hideDbPanel(){ document.getElementById('db-panel').style.display='none'; }
+function toggleDbCollect(){
+  dbPaused = !dbPaused;
+  const btn=document.getElementById('dbp-btn');
+  if(btn) btn.textContent = dbPaused ? '▶ 수집 재개' : '⏸ 수집 일시정지';
+  if(!dbPaused && dbCollecting) dbCollectLoop();
+}
+async function clearDbCache(){
+  if(!confirm('캐시를 삭제하고 다시 수집하시겠습니까?')) return;
+  try{
+    const db=await openIDB();
+    await idbClear(db, IDB_STORE);
+    await idbClear(db, 'meta');
+  }catch(e){}
+  fullDbApts=[];
+  dbCurrentPage=1;
+  setNavDb('collecting','DB 초기화됨');
+  dbpLog('캐시 삭제 완료. 새로고침 시 다시 수집합니다.');
+  location.reload();
+}
+
+// ── APT_DB 교체 ──
+function applyFullDb(){
+  if(fullDbApts.length < 100) return;
+  // 기존 DB에 없는 것만 추가 (중복 방지)
+  const existingNames = new Set(APT_DB.map(a=>a.n));
+  const newEntries = fullDbApts.filter(a=>a&&a.n&&!existingNames.has(a.n));
+  if(newEntries.length > 0){
+    APT_DB.push(...newEntries);
+    // REGION 인덱스 재빌드
+    const r = buildRegionIndex();
+    Object.assign(REGION, r);
+    // 지역 브라우저 재초기화
+    if(typeof initRegionSection==='function') initRegionSection();
+  }
+  setNavDb('ready', `전국 ${APT_DB.length.toLocaleString()}개`);
+  const lbl=document.getElementById('db-label');
+  if(lbl) lbl.style.color='#10b981';
+}
+
+// ── 메인 수집 루프 ──
+async function dbCollectLoop(){
+  const NUM_ROWS = 100;
+  let db;
+  try{ db = await openIDB(); } catch(e){ dbpLog('IndexedDB 오류: '+e.message); return; }
+
+  while(dbCollecting && !dbPaused && dbCurrentPage <= dbTotalPages){
+    try{
+      const result = await fetchAptListPage(dbCurrentPage, NUM_ROWS);
+      const {items, totalCount} = result;
+
+      if(dbTotalPages === 0 && totalCount > 0){
+        dbTotalCount = totalCount;
+        dbTotalPages = Math.ceil(totalCount / NUM_ROWS);
+        document.getElementById('dbp-total').textContent = totalCount.toLocaleString();
+        dbpLog(`총 ${totalCount}개 단지, ${dbTotalPages}페이지 수집 시작`);
+      }
+
+      if(items.length === 0 && dbCurrentPage > 1){
+        // 페이지 끝
+        break;
+      }
+
+      // 변환 & 누적
+      const entries = items
+        .map(i=>({...i, code:i.kaptCode||i.code}))
+        .filter(i=>i.kaptName||i.name);
+
+      // IDB에 원본 저장
+      await idbPutAll(db, IDB_STORE, entries.map(i=>({
+        code:i.kaptCode||i.code||i.kaptName,
+        kaptName:i.kaptName||i.name||'',
+        as1:i.as1||'', as2:i.as2||'', as3:i.as3||'', as4:i.as4||'',
+        bjdCode:i.bjdCode||'',
+      })));
+
+      // APT_DB 형식으로 변환
+      const converted = entries.map(toAptEntry).filter(Boolean);
+      fullDbApts.push(...converted);
+
+      // 50페이지마다 중간 적용
+      if(dbCurrentPage % 50 === 0 || dbCurrentPage === dbTotalPages){
+        applyFullDb();
+      }
+
+      dbCurrentPage++;
+      dbpUpdate(fullDbApts.length, dbCurrentPage-1, dbTotalCount,
+        `수집 중… ${dbCurrentPage-1}/${dbTotalPages} 페이지`);
+
+      if(dbCurrentPage % 10 === 1)
+        dbpLog(`페이지 ${dbCurrentPage-1}/${dbTotalPages} — ${fullDbApts.length}개`);
+
+      await sleep(150); // 150ms 간격
+
+    } catch(e){
+      dbpLog('오류: '+e.message);
+      await sleep(1000);
+    }
+  }
+
+  if(dbCurrentPage > dbTotalPages && dbTotalPages > 0){
+    dbCollecting = false;
+    // 완료 메타 저장
+    try{
+      await idbPutAll(db, 'meta', [{code:'completed', val:'1'},
+        {code:'count', val:String(fullDbApts.length)},
+        {code:'date',  val:new Date().toISOString()}]);
+    }catch(e){}
+    applyFullDb();
+    setNavDb('ready', `전국 ${APT_DB.length.toLocaleString()}개 ✓`);
+    dbpUpdate(fullDbApts.length, dbCurrentPage-1, dbTotalCount, '✅ 수집 완료!');
+    dbpLog(`✅ 전국 ${fullDbApts.length}개 단지 수집 완료 (APT_DB: ${APT_DB.length}개)`);
+    toast(`✅ 전국 ${APT_DB.length.toLocaleString()}개 아파트 검색 준비 완료!`, 'inf');
+  }
+}
+
+// ── 초기화: 캐시 확인 → 없으면 수집 시작 ──
+async function initFullDb(){
+  setNavDb('collecting', 'DB 로딩 중…');
+  let db;
+  try{ db = await openIDB(); } catch(e){
+    setNavDb('error','DB 오류'); return;
+  }
+
+  // 완료 여부 확인
+  let completed = false;
+  try{
+    const meta = await idbGet(db, 'meta', 'completed');
+    completed = meta?.val === '1';
+  }catch(e){}
+
+  if(completed){
+    // 캐시 로드
+    try{
+      const cached = await idbGetAll(db, IDB_STORE);
+      if(cached.length > 500){
+        fullDbApts = cached.map(toAptEntry).filter(Boolean);
+        applyFullDb();
+        dbpLog(`캐시에서 ${cached.length}개 로드 완료`);
+        dbpUpdate(fullDbApts.length, '캐시','—','캐시 로드 완료');
+        return;
+      }
+    }catch(e){ dbpLog('캐시 로드 실패: '+e.message); }
+  }
+
+  // 미완료 or 캐시 없음 → 부분 로드 후 이어서 수집
+  try{
+    const cached = await idbGetAll(db, IDB_STORE);
+    if(cached.length > 0){
+      fullDbApts = cached.map(toAptEntry).filter(Boolean);
+      applyFullDb();
+      dbCurrentPage = Math.ceil(cached.length / 100) + 1;
+      dbpLog(`이전 진행 ${cached.length}개 로드 → 페이지 ${dbCurrentPage}부터 이어서 수집`);
+    }
+  }catch(e){}
+
+  // 수집 시작
+  dbCollecting = true;
+  setNavDb('collecting', `수집 중…`);
+  dbpUpdate(fullDbApts.length, dbCurrentPage, '?', '수집 시작 중…');
+  dbCollectLoop();
+}
+
 /* ══════════════════════════════════════════════════════════════
    AptScore v5 — DB 등록 아파트만 분석 / 임의 점수 없음
 ══════════════════════════════════════════════════════════════ */
@@ -2676,10 +3075,11 @@ function newSearch(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  // molit-in은 모달 제거로 없음 — 안전하게 처리
   const mi=document.getElementById('molit-in');
   if(mi) mi.value=CFG.molit;
   initRegionSection();
+  // 전국 DB 수집 (백그라운드)
+  setTimeout(initFullDb, 800);
 });
 </script>
 </body>
