@@ -105,6 +105,7 @@ body::after{
   align-items:center;justify-content:center;
   padding:80px 24px 60px;
   text-align:center;
+  overflow:visible;
 }
 .hero-badge{
   display:inline-flex;align-items:center;gap:8px;
@@ -147,6 +148,7 @@ body::after{
   width:100%;max-width:660px;
   position:relative;
   animation:up .8s .4s both;margin-bottom:20px;
+  z-index:1000;
 }
 .search-box{
   display:flex;gap:0;
@@ -617,10 +619,11 @@ body::after{
 <style>
 /* ── 자동완성 개선 ── */
 .ac{position:absolute;top:calc(100% + 8px);left:0;right:0;
-  background:rgba(10,14,22,.98);border:1px solid var(--border-gold);
-  border-radius:var(--r2);overflow:hidden;display:none;z-index:300;
-  box-shadow:0 24px 64px rgba(0,0,0,.7);backdrop-filter:blur(20px);
-  max-height:420px;overflow-y:auto;}
+  background:rgba(10,14,22,.99);border:1px solid var(--border-gold);
+  border-radius:var(--r2);overflow:hidden;display:none;
+  z-index:9999;  /* 지역브라우저 위에 확실히 표시 */
+  box-shadow:0 32px 80px rgba(0,0,0,.85);backdrop-filter:blur(24px);
+  max-height:480px;overflow-y:auto;}
 .ac.open{display:block;animation:drop .15s ease-out;}
 @keyframes drop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 .ac-section{padding:8px 16px 4px;font-size:10px;font-weight:800;letter-spacing:1.2px;
@@ -692,6 +695,77 @@ body::after{
 .nf-card-name{font-size:13px;font-weight:700;color:rgba(255,255,255,.88);}
 .nf-card-addr{font-size:11px;color:var(--g3);}
 .nf-card-tag{font-size:10px;font-weight:700;color:var(--gold);margin-top:2px;}
+
+/* ══ 지역으로 찾기 섹션 ══ */
+.region-section{
+  background:var(--bg2);
+  border-top:1px solid var(--border);
+  padding:36px 24px 48px;
+}
+.rs-inner{max-width:900px;margin:0 auto;}
+.rs-title{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--serif);font-size:20px;font-weight:700;
+  color:var(--white);margin-bottom:24px;
+}
+.rs-icon{font-size:22px;}
+.rs-sub{font-size:12px;font-weight:400;color:var(--g3);margin-left:4px;}
+.rs-row{margin-bottom:16px;}
+.rs-label{
+  font-size:10px;font-weight:800;letter-spacing:1.2px;
+  color:var(--g3);text-transform:uppercase;margin-bottom:8px;
+}
+.rs-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.rs-chip{
+  padding:7px 16px;border-radius:20px;cursor:pointer;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  font-size:12px;font-weight:600;color:var(--g3);
+  transition:all .15s;font-family:var(--sans);
+}
+.rs-chip:hover{background:rgba(201,168,76,.1);border-color:rgba(201,168,76,.3);color:var(--gold);}
+.rs-chip.active{background:rgba(201,168,76,.15);border-color:rgba(201,168,76,.5);color:var(--gold);}
+.rs-apt-header{
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;font-weight:700;color:var(--white);
+  margin:20px 0 12px;padding-top:16px;
+  border-top:1px solid var(--border);
+}
+.rs-count{
+  padding:2px 10px;border-radius:20px;
+  background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.25);
+  font-size:11px;font-weight:700;color:var(--gold);
+}
+.rs-apt-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+}
+@media(max-width:700px){.rs-apt-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:480px){.rs-apt-grid{grid-template-columns:1fr;}}
+.rs-apt-card{
+  padding:14px 16px;
+  background:rgba(13,17,23,.9);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  cursor:pointer;
+  transition:all .18s;
+  display:flex;flex-direction:column;gap:4px;
+}
+.rs-apt-card:hover{
+  background:rgba(201,168,76,.08);
+  border-color:rgba(201,168,76,.35);
+  transform:translateY(-1px);
+}
+.rs-apt-name{font-size:13px;font-weight:700;color:rgba(255,255,255,.9);}
+.rs-apt-addr{font-size:10px;color:var(--g3);}
+.rs-apt-meta{
+  font-size:10px;font-weight:600;color:var(--gold);
+  display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;
+}
+.rs-apt-tag{
+  padding:1px 7px;border-radius:8px;
+  background:rgba(201,168,76,.1);
+  border:1px solid rgba(201,168,76,.2);
+}
+
 </style>
 <!-- ══ HERO ══ -->
 <section class="hero" id="heroSec">
@@ -724,13 +798,6 @@ body::after{
     <button class="q-chip" onclick="pickByKey('잠실엘스')">잠실엘스</button>
     <button class="q-chip" onclick="pickByKey('마포래미안푸르지오')">마포래미안푸르지오</button>
   </div>
-
-  <!-- ══ 지역 브라우저 ══ -->
-  <div class="region-browser" id="regionBrowser">
-    <div class="rb-header">
-      <div class="rb-title">📍 지역으로 찾기</div>
-      <div class="rb-breadcrumb" id="rb-bread"></div>
-    </div>
     <div class="rb-chips" id="rb-city"></div>
     <div class="rb-chips" id="rb-gu" style="display:none"></div>
     <div class="rb-apt-grid" id="rb-list" style="display:none"></div>
@@ -741,6 +808,45 @@ body::after{
     <div class="h-kpi"><div class="kpi-n">100점</div><div class="kpi-l">종합 점수</div></div>
     <div class="h-kpi"><div class="kpi-n">DB</div><div class="kpi-l">등록 아파트만</div></div>
     <div class="h-kpi"><div class="kpi-n">즉시</div><div class="kpi-l">결과 확인</div></div>
+  </div>
+</section>
+<!-- ══════════════════════════════════
+     지역으로 찾기 — 독립 섹션
+══════════════════════════════════ -->
+<section class="region-section" id="regionSection">
+  <div class="rs-inner">
+    <div class="rs-title">
+      <span class="rs-icon">📍</span>
+      <span>지역으로 찾기</span>
+      <span class="rs-sub">시/도 → 구/군 → 아파트 순서로 선택하세요</span>
+    </div>
+
+    <!-- 시/도 탭 -->
+    <div class="rs-row" id="rs-sido">
+      <div class="rs-label">시 · 도</div>
+      <div class="rs-chips" id="rs-sido-chips"></div>
+    </div>
+
+    <!-- 구/군/시 탭 (시/도 선택 후 표시) -->
+    <div class="rs-row" id="rs-gugun" style="display:none">
+      <div class="rs-label">구 · 군</div>
+      <div class="rs-chips" id="rs-gugun-chips"></div>
+    </div>
+
+    <!-- 동/읍면 탭 (구 선택 후 표시) -->
+    <div class="rs-row" id="rs-dong" style="display:none">
+      <div class="rs-label">동 · 읍면</div>
+      <div class="rs-chips" id="rs-dong-chips"></div>
+    </div>
+
+    <!-- 아파트 목록 -->
+    <div id="rs-apt-wrap" style="display:none">
+      <div class="rs-apt-header">
+        <span id="rs-apt-title">아파트 목록</span>
+        <span id="rs-apt-count" class="rs-count"></span>
+      </div>
+      <div class="rs-apt-grid" id="rs-apt-grid"></div>
+    </div>
   </div>
 </section>
 
@@ -1025,11 +1131,11 @@ const APT_DB=[
   {k:['원주자이'],n:'원주자이',city:'강원도',gu:'원주시',dong:'반곡동',a:'강원도 원주시 반곡동',la:37.3311,lo:127.9458,yr:2018,st:'만종역',sd:1500,price:1900},
   {k:['춘천자이'],n:'춘천자이',city:'강원도',gu:'춘천시',dong:'석사동',a:'강원도 춘천시 석사동',la:37.8849,lo:127.739,yr:2016,st:'춘천역',sd:2000,price:1800},
   /* ── 경기 ── */
-  {k:['고양삼송지축e편한세상','고양삼송지축편한세상'],n:'고양삼송지축e편한세상',city:'경기',gu:'고양시',dong:'덕양구 지축동',a:'경기 고양시 덕양구 지축동',la:37.6545,lo:126.8918,yr:2020,st:'지축역',sd:200,price:3000},
-  {k:['삼송자이'],n:'삼송자이',city:'경기',gu:'고양시',dong:'덕양구 삼송동',a:'경기 고양시 덕양구 삼송동',la:37.6615,lo:126.8741,yr:2015,st:'삼송역',sd:300,price:2700},
-  {k:['일산백석자이'],n:'일산백석자이',city:'경기',gu:'고양시',dong:'일산동구 백석동',a:'경기 고양시 일산동구 백석동',la:37.6569,lo:126.782,yr:2009,st:'백석역',sd:200,price:2600},
-  {k:['창릉신도시자이'],n:'창릉신도시자이',city:'경기',gu:'고양시',dong:'덕양구 창릉동',a:'경기 고양시 덕양구 창릉동',la:37.6388,lo:126.8559,yr:2024,st:'창릉역',sd:400,price:3200},
-  {k:['킨텍스원시티'],n:'킨텍스원시티',city:'경기',gu:'고양시',dong:'일산서구 대화동',a:'경기 고양시 일산서구 대화동',la:37.6734,lo:126.7556,yr:2021,st:'대화역',sd:400,price:3200},
+  {k:['고양삼송지축e편한세상','고양삼송지축편한세상'],n:'고양삼송지축e편한세상',city:'경기',gu:'고양시',dong:'지축동',a:'경기 고양시 덕양구 지축동',la:37.6545,lo:126.8918,yr:2020,st:'지축역',sd:200,price:3000},
+  {k:['삼송자이'],n:'삼송자이',city:'경기',gu:'고양시',dong:'삼송동',a:'경기 고양시 덕양구 삼송동',la:37.6615,lo:126.8741,yr:2015,st:'삼송역',sd:300,price:2700},
+  {k:['일산백석자이'],n:'일산백석자이',city:'경기',gu:'고양시',dong:'백석동',a:'경기 고양시 일산동구 백석동',la:37.6569,lo:126.782,yr:2009,st:'백석역',sd:200,price:2600},
+  {k:['창릉신도시자이'],n:'창릉신도시자이',city:'경기',gu:'고양시',dong:'창릉동',a:'경기 고양시 덕양구 창릉동',la:37.6388,lo:126.8559,yr:2024,st:'창릉역',sd:400,price:3200},
+  {k:['킨텍스원시티'],n:'킨텍스원시티',city:'경기',gu:'고양시',dong:'대화동',a:'경기 고양시 일산서구 대화동',la:37.6734,lo:126.7556,yr:2021,st:'대화역',sd:400,price:3200},
   {k:['과천슈르래미안','과천래미안슈르'],n:'과천래미안슈르',city:'경기',gu:'과천시',dong:'별양동',a:'경기 과천시 별양동',la:37.4382,lo:126.9891,yr:2003,st:'과천역',sd:400,price:7200},
   {k:['과천위버필드'],n:'과천위버필드',city:'경기',gu:'과천시',dong:'부림동',a:'경기 과천시 부림동',la:37.429,lo:126.9866,yr:2021,st:'정부과천청사역',sd:500,price:8200},
   {k:['과천지식정보타운자이'],n:'과천지식정보타운자이',city:'경기',gu:'과천시',dong:'갈현동',a:'경기 과천시 갈현동',la:37.4224,lo:126.9755,yr:2023,st:'경마공원역',sd:600,price:7500},
@@ -1054,35 +1160,35 @@ const APT_DB=[
   {k:['부천역자이'],n:'부천역자이',city:'경기',gu:'부천시',dong:'중동',a:'경기 부천시 중동',la:37.4989,lo:126.7813,yr:2021,st:'부천역',sd:300,price:2900},
   {k:['소사역더샵'],n:'소사역더샵',city:'경기',gu:'부천시',dong:'소사본동',a:'경기 부천시 소사본동',la:37.4808,lo:126.8003,yr:2022,st:'소사역',sd:200,price:2800},
   {k:['중동래미안'],n:'중동래미안',city:'경기',gu:'부천시',dong:'중동',a:'경기 부천시 중동',la:37.5023,lo:126.7632,yr:2001,st:'중동역',sd:300,price:2700},
-  {k:['봇들마을롯데'],n:'봇들마을롯데',city:'경기',gu:'성남시',dong:'분당구 수내동',a:'경기 성남시 분당구 수내동',la:37.3856,lo:127.1191,yr:2004,st:'수내역',sd:400,price:4200},
-  {k:['분당수내롯데'],n:'분당수내롯데',city:'경기',gu:'성남시',dong:'분당구 수내동',a:'경기 성남시 분당구 수내동',la:37.384,lo:127.121,yr:2006,st:'수내역',sd:200,price:4500},
-  {k:['분당파크뷰'],n:'분당파크뷰',city:'경기',gu:'성남시',dong:'분당구 수내동',a:'경기 성남시 분당구 수내동',la:37.384,lo:127.121,yr:2003,st:'수내역',sd:300,price:4500},
-  {k:['야탑래미안'],n:'야탑래미안',city:'경기',gu:'성남시',dong:'분당구 야탑동',a:'경기 성남시 분당구 야탑동',la:37.4116,lo:127.1294,yr:2003,st:'야탑역',sd:300,price:3800},
-  {k:['위례더시티자이','위례자이더시티'],n:'위례자이더시티',city:'경기',gu:'성남시',dong:'수정구 창곡동',a:'경기 성남시 수정구 창곡동',la:37.4669,lo:127.1323,yr:2017,st:'남위례역',sd:400,price:4200},
-  {k:['정자역편한세상','정자역e편한세상'],n:'정자역e편한세상',city:'경기',gu:'성남시',dong:'분당구 정자동',a:'경기 성남시 분당구 정자동',la:37.3605,lo:127.109,yr:2021,st:'정자역',sd:300,price:5000},
-  {k:['파크뷰'],n:'파크뷰',city:'경기',gu:'성남시',dong:'분당구 정자동',a:'경기 성남시 분당구 정자동',la:37.368,lo:127.118,yr:2004,st:'정자역',sd:400,price:5000},
-  {k:['판교더샵퍼스트파크','판교퍼스트파크더샵'],n:'판교더샵퍼스트파크',city:'경기',gu:'성남시',dong:'분당구 판교동',a:'경기 성남시 분당구 판교동',la:37.4012,lo:127.1072,yr:2018,st:'판교역',sd:800,price:5200},
-  {k:['판교원마을'],n:'판교원마을',city:'경기',gu:'성남시',dong:'분당구 판교동',a:'경기 성남시 분당구 판교동',la:37.396,lo:127.102,yr:2012,st:'판교역',sd:600,price:4800},
-  {k:['힐스테이트판교역','판교역힐스테이트'],n:'힐스테이트판교역',city:'경기',gu:'성남시',dong:'분당구 삼평동',a:'경기 성남시 분당구 삼평동',la:37.4015,lo:127.106,yr:2019,st:'판교역',sd:600,price:5500},
-  {k:['광교상록자이'],n:'광교상록자이',city:'경기',gu:'수원시',dong:'영통구 이의동',a:'경기 수원시 영통구 이의동',la:37.2894,lo:127.0473,yr:2014,st:'광교중앙역',sd:400,price:3700},
-  {k:['광교레이크힐스테이트','광교힐스테이트레이크'],n:'광교힐스테이트레이크',city:'경기',gu:'수원시',dong:'영통구 원천동',a:'경기 수원시 영통구 원천동',la:37.2832,lo:127.0545,yr:2017,st:'광교중앙역',sd:500,price:3900},
-  {k:['수원역푸르지오'],n:'수원역푸르지오',city:'경기',gu:'수원시',dong:'권선구 매산동',a:'경기 수원시 권선구 매산동',la:37.2682,lo:127.0,yr:2020,st:'수원역',sd:300,price:2800},
-  {k:['수원팔달자이'],n:'수원팔달자이',city:'경기',gu:'수원시',dong:'팔달구 우만동',a:'경기 수원시 팔달구 우만동',la:37.2793,lo:127.0202,yr:2022,st:'수원시청역',sd:400,price:3000},
-  {k:['영통엠파이어롯데캐슬','영통롯데캐슬엠파이어'],n:'영통롯데캐슬엠파이어',city:'경기',gu:'수원시',dong:'영통구 영통동',a:'경기 수원시 영통구 영통동',la:37.2552,lo:127.063,yr:2010,st:'청명역',sd:400,price:2900},
+  {k:['봇들마을롯데'],n:'봇들마을롯데',city:'경기',gu:'성남시',dong:'수내동',a:'경기 성남시 분당구 수내동',la:37.3856,lo:127.1191,yr:2004,st:'수내역',sd:400,price:4200},
+  {k:['분당수내롯데'],n:'분당수내롯데',city:'경기',gu:'성남시',dong:'수내동',a:'경기 성남시 분당구 수내동',la:37.384,lo:127.121,yr:2006,st:'수내역',sd:200,price:4500},
+  {k:['분당파크뷰'],n:'분당파크뷰',city:'경기',gu:'성남시',dong:'수내동',a:'경기 성남시 분당구 수내동',la:37.384,lo:127.121,yr:2003,st:'수내역',sd:300,price:4500},
+  {k:['야탑래미안'],n:'야탑래미안',city:'경기',gu:'성남시',dong:'야탑동',a:'경기 성남시 분당구 야탑동',la:37.4116,lo:127.1294,yr:2003,st:'야탑역',sd:300,price:3800},
+  {k:['위례더시티자이','위례자이더시티'],n:'위례자이더시티',city:'경기',gu:'성남시',dong:'창곡동',a:'경기 성남시 수정구 창곡동',la:37.4669,lo:127.1323,yr:2017,st:'남위례역',sd:400,price:4200},
+  {k:['정자역편한세상','정자역e편한세상'],n:'정자역e편한세상',city:'경기',gu:'성남시',dong:'정자동',a:'경기 성남시 분당구 정자동',la:37.3605,lo:127.109,yr:2021,st:'정자역',sd:300,price:5000},
+  {k:['파크뷰'],n:'파크뷰',city:'경기',gu:'성남시',dong:'정자동',a:'경기 성남시 분당구 정자동',la:37.368,lo:127.118,yr:2004,st:'정자역',sd:400,price:5000},
+  {k:['판교더샵퍼스트파크','판교퍼스트파크더샵'],n:'판교더샵퍼스트파크',city:'경기',gu:'성남시',dong:'판교동',a:'경기 성남시 분당구 판교동',la:37.4012,lo:127.1072,yr:2018,st:'판교역',sd:800,price:5200},
+  {k:['판교원마을'],n:'판교원마을',city:'경기',gu:'성남시',dong:'판교동',a:'경기 성남시 분당구 판교동',la:37.396,lo:127.102,yr:2012,st:'판교역',sd:600,price:4800},
+  {k:['힐스테이트판교역','판교역힐스테이트'],n:'힐스테이트판교역',city:'경기',gu:'성남시',dong:'삼평동',a:'경기 성남시 분당구 삼평동',la:37.4015,lo:127.106,yr:2019,st:'판교역',sd:600,price:5500},
+  {k:['광교상록자이'],n:'광교상록자이',city:'경기',gu:'수원시',dong:'이의동',a:'경기 수원시 영통구 이의동',la:37.2894,lo:127.0473,yr:2014,st:'광교중앙역',sd:400,price:3700},
+  {k:['광교레이크힐스테이트','광교힐스테이트레이크'],n:'광교힐스테이트레이크',city:'경기',gu:'수원시',dong:'원천동',a:'경기 수원시 영통구 원천동',la:37.2832,lo:127.0545,yr:2017,st:'광교중앙역',sd:500,price:3900},
+  {k:['수원역푸르지오'],n:'수원역푸르지오',city:'경기',gu:'수원시',dong:'매산동',a:'경기 수원시 권선구 매산동',la:37.2682,lo:127.0,yr:2020,st:'수원역',sd:300,price:2800},
+  {k:['수원팔달자이'],n:'수원팔달자이',city:'경기',gu:'수원시',dong:'우만동',a:'경기 수원시 팔달구 우만동',la:37.2793,lo:127.0202,yr:2022,st:'수원시청역',sd:400,price:3000},
+  {k:['영통엠파이어롯데캐슬','영통롯데캐슬엠파이어'],n:'영통롯데캐슬엠파이어',city:'경기',gu:'수원시',dong:'영통동',a:'경기 수원시 영통구 영통동',la:37.2552,lo:127.063,yr:2010,st:'청명역',sd:400,price:2900},
   {k:['배곧자이'],n:'배곧자이',city:'경기',gu:'시흥시',dong:'정왕동',a:'경기 시흥시 정왕동',la:37.3486,lo:126.7358,yr:2019,st:'정왕역',sd:800,price:2300},
   {k:['시흥목감자이'],n:'시흥목감자이',city:'경기',gu:'시흥시',dong:'목감동',a:'경기 시흥시 목감동',la:37.3884,lo:126.8225,yr:2017,st:'시흥능곡역',sd:2000,price:2400},
-  {k:['레이크타운푸르지오'],n:'레이크타운푸르지오',city:'경기',gu:'안산시',dong:'단원구 대부동',a:'경기 안산시 단원구 대부동',la:37.3071,lo:126.8483,yr:2020,st:'초지역',sd:400,price:2300},
-  {k:['안산중앙역자이'],n:'안산중앙역자이',city:'경기',gu:'안산시',dong:'단원구 고잔동',a:'경기 안산시 단원구 고잔동',la:37.3195,lo:126.8287,yr:2018,st:'중앙역',sd:200,price:2500},
-  {k:['인덕원자이'],n:'인덕원자이',city:'경기',gu:'안양시',dong:'동안구 관양동',a:'경기 안양시 동안구 관양동',la:37.3951,lo:126.9655,yr:2023,st:'인덕원역',sd:300,price:3500},
-  {k:['평촌래미안'],n:'평촌래미안',city:'경기',gu:'안양시',dong:'동안구 비산동',a:'경기 안양시 동안구 비산동',la:37.3919,lo:126.9352,yr:2005,st:'범계역',sd:500,price:3000},
-  {k:['평촌어반센트럴'],n:'평촌어반센트럴',city:'경기',gu:'안양시',dong:'동안구 평촌동',a:'경기 안양시 동안구 평촌동',la:37.3881,lo:126.947,yr:2022,st:'평촌역',sd:300,price:3600},
+  {k:['레이크타운푸르지오'],n:'레이크타운푸르지오',city:'경기',gu:'안산시',dong:'대부동',a:'경기 안산시 단원구 대부동',la:37.3071,lo:126.8483,yr:2020,st:'초지역',sd:400,price:2300},
+  {k:['안산중앙역자이'],n:'안산중앙역자이',city:'경기',gu:'안산시',dong:'고잔동',a:'경기 안산시 단원구 고잔동',la:37.3195,lo:126.8287,yr:2018,st:'중앙역',sd:200,price:2500},
+  {k:['인덕원자이'],n:'인덕원자이',city:'경기',gu:'안양시',dong:'관양동',a:'경기 안양시 동안구 관양동',la:37.3951,lo:126.9655,yr:2023,st:'인덕원역',sd:300,price:3500},
+  {k:['평촌래미안'],n:'평촌래미안',city:'경기',gu:'안양시',dong:'비산동',a:'경기 안양시 동안구 비산동',la:37.3919,lo:126.9352,yr:2005,st:'범계역',sd:500,price:3000},
+  {k:['평촌어반센트럴'],n:'평촌어반센트럴',city:'경기',gu:'안양시',dong:'평촌동',a:'경기 안양시 동안구 평촌동',la:37.3881,lo:126.947,yr:2022,st:'평촌역',sd:300,price:3600},
   {k:['덕계자이'],n:'덕계자이',city:'경기',gu:'양주시',dong:'덕계동',a:'경기 양주시 덕계동',la:37.8053,lo:127.0524,yr:2020,st:'덕계역',sd:800,price:2000},
   {k:['양주옥정호반베르디움'],n:'양주옥정호반베르디움',city:'경기',gu:'양주시',dong:'옥정동',a:'경기 양주시 옥정동',la:37.8081,lo:127.0145,yr:2022,st:'회정역',sd:500,price:2100},
-  {k:['광교그대가'],n:'광교그대가',city:'경기',gu:'용인시',dong:'수지구 상현동',a:'경기 용인시 수지구 상현동',la:37.2942,lo:127.0578,yr:2016,st:'광교역',sd:500,price:3200},
-  {k:['동백역더샵'],n:'동백역더샵',city:'경기',gu:'용인시',dong:'기흥구 동백동',a:'경기 용인시 기흥구 동백동',la:37.2696,lo:127.1267,yr:2019,st:'동백역',sd:350,price:3400},
-  {k:['수지구성복역롯데'],n:'수지구성복역롯데',city:'경기',gu:'용인시',dong:'수지구 성복동',a:'경기 용인시 수지구 성복동',la:37.3234,lo:127.0918,yr:2019,st:'성복역',sd:200,price:3500},
-  {k:['신갈자이'],n:'신갈자이',city:'경기',gu:'용인시',dong:'기흥구 신갈동',a:'경기 용인시 기흥구 신갈동',la:37.28,lo:127.1087,yr:2021,st:'신갈역',sd:600,price:2700},
-  {k:['용인기흥자이'],n:'용인기흥자이',city:'경기',gu:'용인시',dong:'기흥구 기흥동',a:'경기 용인시 기흥구 기흥동',la:37.3099,lo:127.1158,yr:2010,st:'기흥역',sd:600,price:2800},
+  {k:['광교그대가'],n:'광교그대가',city:'경기',gu:'용인시',dong:'상현동',a:'경기 용인시 수지구 상현동',la:37.2942,lo:127.0578,yr:2016,st:'광교역',sd:500,price:3200},
+  {k:['동백역더샵'],n:'동백역더샵',city:'경기',gu:'용인시',dong:'동백동',a:'경기 용인시 기흥구 동백동',la:37.2696,lo:127.1267,yr:2019,st:'동백역',sd:350,price:3400},
+  {k:['수지구성복역롯데'],n:'수지구성복역롯데',city:'경기',gu:'용인시',dong:'성복동',a:'경기 용인시 수지구 성복동',la:37.3234,lo:127.0918,yr:2019,st:'성복역',sd:200,price:3500},
+  {k:['신갈자이'],n:'신갈자이',city:'경기',gu:'용인시',dong:'신갈동',a:'경기 용인시 기흥구 신갈동',la:37.28,lo:127.1087,yr:2021,st:'신갈역',sd:600,price:2700},
+  {k:['용인기흥자이'],n:'용인기흥자이',city:'경기',gu:'용인시',dong:'기흥동',a:'경기 용인시 기흥구 기흥동',la:37.3099,lo:127.1158,yr:2010,st:'기흥역',sd:600,price:2800},
   {k:['민락자이'],n:'민락자이',city:'경기',gu:'의정부시',dong:'민락동',a:'경기 의정부시 민락동',la:37.7508,lo:127.0893,yr:2018,st:'민락역',sd:600,price:2300},
   {k:['의정부역롯데캐슬'],n:'의정부역롯데캐슬',city:'경기',gu:'의정부시',dong:'의정부동',a:'경기 의정부시 의정부동',la:37.738,lo:127.0349,yr:2019,st:'의정부역',sd:200,price:2600},
   {k:['운정롯데캐슬'],n:'운정롯데캐슬',city:'경기',gu:'파주시',dong:'동패동',a:'경기 파주시 동패동',la:37.71,lo:126.752,yr:2015,st:'운정역',sd:700,price:2200},
@@ -1104,7 +1210,7 @@ const APT_DB=[
   {k:['거제자이SK뷰','거제SK뷰자이','거제뷰자이'],n:'거제SK뷰자이',city:'경상남도',gu:'거제시',dong:'고현동',a:'경상남도 거제시 고현동',la:34.8746,lo:128.6211,yr:2019,st:'고현버스',sd:1000,price:1700},
   {k:['김해자이'],n:'김해자이',city:'경상남도',gu:'김해시',dong:'장유동',a:'경상남도 김해시 장유동',la:35.2006,lo:128.836,yr:2016,st:'진례역',sd:2000,price:2100},
   {k:['진주자이'],n:'진주자이',city:'경상남도',gu:'진주시',dong:'충무공동',a:'경상남도 진주시 충무공동',la:35.1799,lo:128.09,yr:2018,st:'진주역',sd:3000,price:1800},
-  {k:['창원가음정자이'],n:'창원가음정자이',city:'경상남도',gu:'창원시',dong:'성산구 가음동',a:'경상남도 창원시 성산구 가음동',la:35.2115,lo:128.7256,yr:2015,st:'창원중앙역',sd:2000,price:2200},
+  {k:['창원가음정자이'],n:'창원가음정자이',city:'경상남도',gu:'창원시',dong:'가음동',a:'경상남도 창원시 성산구 가음동',la:35.2115,lo:128.7256,yr:2015,st:'창원중앙역',sd:2000,price:2200},
   {k:['창원자이'],n:'창원자이',city:'경상남도',gu:'창원시',dong:'의창구',a:'경상남도 창원시 의창구',la:35.2278,lo:128.6806,yr:2017,st:'창원역',sd:1500,price:2300},
   /* ── 경상북도 ── */
   {k:['경주자이'],n:'경주자이',city:'경상북도',gu:'경주시',dong:'황성동',a:'경상북도 경주시 황성동',la:35.8607,lo:129.2256,yr:2017,st:'경주역',sd:1500,price:1700},
@@ -1272,8 +1378,8 @@ const APT_DB=[
   {k:['여수웅천자이'],n:'여수웅천자이',city:'전라남도',gu:'여수시',dong:'웅천동',a:'전라남도 여수시 웅천동',la:34.789,lo:127.688,yr:2018,st:'여수엑스포역',sd:5000,price:1900},
   /* ── 전라북도 ── */
   {k:['군산수송자이'],n:'군산수송자이',city:'전라북도',gu:'군산시',dong:'수송동',a:'전라북도 군산시 수송동',la:35.9799,lo:126.7133,yr:2017,st:'군산역',sd:1500,price:1700},
-  {k:['전주에코시티자이'],n:'전주에코시티자이',city:'전라북도',gu:'전주시',dong:'덕진구 만성동',a:'전라북도 전주시 덕진구 만성동',la:35.8413,lo:127.0939,yr:2016,st:'전주역',sd:4000,price:1900},
-  {k:['전주효천자이'],n:'전주효천자이',city:'전라북도',gu:'전주시',dong:'완산구 효천동',a:'전라북도 전주시 완산구 효천동',la:35.7988,lo:127.1097,yr:2020,st:'동전주역',sd:1500,price:1900},
+  {k:['전주에코시티자이'],n:'전주에코시티자이',city:'전라북도',gu:'전주시',dong:'만성동',a:'전라북도 전주시 덕진구 만성동',la:35.8413,lo:127.0939,yr:2016,st:'전주역',sd:4000,price:1900},
+  {k:['전주효천자이'],n:'전주효천자이',city:'전라북도',gu:'전주시',dong:'효천동',a:'전라북도 전주시 완산구 효천동',la:35.7988,lo:127.1097,yr:2020,st:'동전주역',sd:1500,price:1900},
   /* ── 제주 ── */
   {k:['서귀포자이'],n:'서귀포자이',city:'제주',gu:'서귀포시',dong:'강정동',a:'제주 서귀포시 강정동',la:33.2571,lo:126.5154,yr:2018,st:'서귀포버스터미널',sd:3000,price:2300},
   {k:['제주자이'],n:'제주자이',city:'제주',gu:'제주시',dong:'노형동',a:'제주 제주시 노형동',la:33.4995,lo:126.4876,yr:2019,st:'제주버스터미널',sd:2000,price:2700},
@@ -1281,12 +1387,12 @@ const APT_DB=[
   /* ── 충청남도 ── */
   {k:['아산배방자이'],n:'아산배방자이',city:'충청남도',gu:'아산시',dong:'배방읍',a:'충청남도 아산시 배방읍',la:36.8068,lo:127.0707,yr:2020,st:'배방역',sd:300,price:2300},
   {k:['아산탕정자이'],n:'아산탕정자이',city:'충청남도',gu:'아산시',dong:'탕정면',a:'충청남도 아산시 탕정면',la:36.7947,lo:127.0194,yr:2019,st:'아산역',sd:600,price:2200},
-  {k:['천안두정롯데'],n:'천안두정롯데',city:'충청남도',gu:'천안시',dong:'서북구 두정동',a:'충청남도 천안시 서북구 두정동',la:36.8443,lo:127.1218,yr:2015,st:'두정역',sd:300,price:2200},
-  {k:['천안불당자이'],n:'천안불당자이',city:'충청남도',gu:'천안시',dong:'서북구 불당동',a:'충청남도 천안시 서북구 불당동',la:36.8256,lo:127.1218,yr:2016,st:'천안역',sd:4000,price:2500},
+  {k:['천안두정롯데'],n:'천안두정롯데',city:'충청남도',gu:'천안시',dong:'두정동',a:'충청남도 천안시 서북구 두정동',la:36.8443,lo:127.1218,yr:2015,st:'두정역',sd:300,price:2200},
+  {k:['천안불당자이'],n:'천안불당자이',city:'충청남도',gu:'천안시',dong:'불당동',a:'충청남도 천안시 서북구 불당동',la:36.8256,lo:127.1218,yr:2016,st:'천안역',sd:4000,price:2500},
   /* ── 충청북도 ── */
-  {k:['청주가경아이파크'],n:'청주가경아이파크',city:'충청북도',gu:'청주시',dong:'흥덕구 가경동',a:'충청북도 청주시 흥덕구 가경동',la:36.6222,lo:127.4383,yr:2012,st:'청주역',sd:2000,price:2000},
-  {k:['청주센트럴자이'],n:'청주센트럴자이',city:'충청북도',gu:'청주시',dong:'청원구 율량동',a:'충청북도 청주시 청원구 율량동',la:36.6607,lo:127.5147,yr:2021,st:'오창역',sd:3000,price:2200},
-  {k:['청주지웰시티'],n:'청주지웰시티',city:'충청북도',gu:'청주시',dong:'흥덕구 복대동',a:'충청북도 청주시 흥덕구 복대동',la:36.641,lo:127.4436,yr:2019,st:'서청주역',sd:1500,price:2100},
+  {k:['청주가경아이파크'],n:'청주가경아이파크',city:'충청북도',gu:'청주시',dong:'가경동',a:'충청북도 청주시 흥덕구 가경동',la:36.6222,lo:127.4383,yr:2012,st:'청주역',sd:2000,price:2000},
+  {k:['청주센트럴자이'],n:'청주센트럴자이',city:'충청북도',gu:'청주시',dong:'율량동',a:'충청북도 청주시 청원구 율량동',la:36.6607,lo:127.5147,yr:2021,st:'오창역',sd:3000,price:2200},
+  {k:['청주지웰시티'],n:'청주지웰시티',city:'충청북도',gu:'청주시',dong:'복대동',a:'충청북도 청주시 흥덕구 복대동',la:36.641,lo:127.4436,yr:2019,st:'서청주역',sd:1500,price:2100},
 ];
 
 /* ══════════════════════════════════════════
@@ -1997,72 +2103,105 @@ function backToSearch(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+
 /* ══════════════════════════════════════════
-   지역 브라우저
+   지역으로 찾기 — 시/도 → 구/군 → 동 → 아파트
 ══════════════════════════════════════════ */
-let rbState={city:null,gu:null};
+let rsState={sido:null,gu:null,dong:null};
 
-function initRegionBrowser(){
-  const cityEl=document.getElementById('rb-city');
-  const cities=Object.keys(REGION.cities).sort();
-  cityEl.innerHTML=cities.map(c=>`<button class="rb-chip" onclick="rbSelectCity('${c}')">${c}</button>`).join('');
+function initRegionSection(){
+  // 시/도 칩 생성 (APT_DB 기반)
+  const cities=Object.keys(REGION.cities).sort((a,b)=>{
+    const ORDER=['서울','경기','인천','부산','대구','대전','광주','울산','세종'];
+    const ia=ORDER.indexOf(a), ib=ORDER.indexOf(b);
+    if(ia>=0&&ib>=0) return ia-ib;
+    if(ia>=0) return -1; if(ib>=0) return 1;
+    return a.localeCompare(b);
+  });
+  document.getElementById('rs-sido-chips').innerHTML=
+    cities.map(c=>`<button class="rs-chip" onclick="rsSelectSido('${c}',this)">${c}</button>`).join('');
 }
 
-function rbSelectCity(city){
-  rbState={city,gu:null};
-  document.querySelectorAll('#rb-city .rb-chip').forEach(b=>{
-    b.classList.toggle('active',b.textContent===city);
-  });
-  const guEl=document.getElementById('rb-gu');
-  const gus=[...REGION.cities[city]].sort();
-  guEl.innerHTML=`<button class="rb-chip" style="color:var(--g3);font-size:11px" onclick="rbReset()">← 시/도 다시 선택</button>`
-    +gus.map(g=>`<button class="rb-chip" onclick="rbSelectGu('${city}','${g}')">${g}</button>`).join('');
-  guEl.style.display='flex';
-  document.getElementById('rb-list').style.display='none';
-  updateBread();
+function rsSelectSido(sido,btn){
+  rsState={sido,gu:null,dong:null};
+  document.querySelectorAll('#rs-sido-chips .rs-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // 구/군 목록
+  const gus=[...REGION.cities[sido]].sort();
+  document.getElementById('rs-gugun-chips').innerHTML=
+    gus.map(g=>`<button class="rs-chip" onclick="rsSelectGu('${sido}','${g}',this)">${g}</button>`).join('');
+  document.getElementById('rs-gugun').style.display='block';
+  document.getElementById('rs-dong').style.display='none';
+  document.getElementById('rs-apt-wrap').style.display='none';
+  // 구/군으로 바로 스크롤
+  document.getElementById('rs-gugun').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function rbSelectGu(city,gu){
-  rbState={city,gu};
-  document.querySelectorAll('#rb-gu .rb-chip').forEach(b=>{
-    b.classList.toggle('active',b.textContent===gu);
-  });
-  const key=city+'|'+gu;
+function rsSelectGu(sido,gu,btn){
+  rsState={sido,gu,dong:null};
+  document.querySelectorAll('#rs-gugun-chips .rs-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const key=sido+'|'+gu;
   const apts=REGION.gus[key]||[];
-  const listEl=document.getElementById('rb-list');
-  if(!apts.length){
-    listEl.innerHTML='<div class="rb-empty">등록된 아파트가 없습니다</div>';
+
+  // 동 목록 추출
+  const dongs=[...new Set(apts.map(a=>a.dong))].filter(Boolean).sort();
+  if(dongs.length>1){
+    document.getElementById('rs-dong-chips').innerHTML=
+      `<button class="rs-chip active" onclick="rsSelectDong('${sido}','${gu}',null,this)">전체</button>`+
+      dongs.map(d=>`<button class="rs-chip" onclick="rsSelectDong('${sido}','${gu}','${d}',this)">${d}</button>`).join('');
+    document.getElementById('rs-dong').style.display='block';
   } else {
-    // 동별 그룹핑
-    const byDong={};
-    for(const a of apts){if(!byDong[a.dong])byDong[a.dong]=[];byDong[a.dong].push(a);}
-    listEl.innerHTML=Object.entries(byDong).sort(([a],[b])=>a.localeCompare(b)).map(([dong,list])=>
-      `<div style="grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--g3);text-transform:uppercase;padding:4px 0 2px;border-top:1px solid var(--border);margin-top:4px">${dong}</div>`
-      +list.map(a=>`<div class="rb-apt-card" onclick="pickApt(APT_DB.find(x=>x.n==='${a.n}'))">
-        <div class="rb-apt-name">${a.n}</div>
-        <div class="rb-apt-meta">${a.yr}년 · ${a.st} ${fd(a.sd)}</div>
-      </div>`).join('')
-    ).join('');
+    document.getElementById('rs-dong').style.display='none';
   }
-  listEl.style.display='grid';
-  updateBread();
+
+  rsShowApts(apts, `${sido} ${gu}` );
 }
 
-function rbReset(){
-  rbState={city:null,gu:null};
-  document.querySelectorAll('.rb-chip').forEach(b=>b.classList.remove('active'));
-  document.getElementById('rb-gu').style.display='none';
-  document.getElementById('rb-list').style.display='none';
-  updateBread();
+function rsSelectDong(sido,gu,dong,btn){
+  rsState.dong=dong;
+  document.querySelectorAll('#rs-dong-chips .rs-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const key=sido+'|'+gu;
+  const all=REGION.gus[key]||[];
+  const apts=dong?all.filter(a=>a.dong===dong):all;
+  rsShowApts(apts, dong?`${sido} ${gu} ${dong}`:`${sido} ${gu}`);
 }
 
-function updateBread(){
-  const el=document.getElementById('rb-bread');
-  let html='';
-  if(rbState.city) html+=`<span onclick="rbReset()">${rbState.city}</span>`;
-  if(rbState.gu) html+=`<i>›</i><span>${rbState.gu}</span>`;
-  el.innerHTML=html;
+function rsShowApts(apts,label){
+  const grid=document.getElementById('rs-apt-grid');
+  const wrap=document.getElementById('rs-apt-wrap');
+  const title=document.getElementById('rs-apt-title');
+  const count=document.getElementById('rs-apt-count');
+
+  title.textContent=label+' 아파트';
+  count.textContent=apts.length+'개';
+  wrap.style.display='block';
+
+  if(!apts.length){
+    grid.innerHTML='<div style="color:var(--g3);font-size:13px;padding:20px 0;grid-column:1/-1">등록된 아파트가 없습니다</div>';
+    return;
+  }
+
+  // 준공년도 최신순 정렬
+  const sorted=[...apts].sort((a,b)=>b.yr-a.yr);
+  grid.innerHTML=sorted.map(a=>`
+    <div class="rs-apt-card" onclick="pickApt(APT_DB.find(x=>x.n===${JSON.stringify(a.n)}))">
+      <div class="rs-apt-name">${a.n}</div>
+      <div class="rs-apt-addr">${a.dong}</div>
+      <div class="rs-apt-meta">
+        <span class="rs-apt-tag">${a.yr}년</span>
+        <span class="rs-apt-tag">${a.st} ${fd(a.sd)}</span>
+        ${a.price?`<span class="rs-apt-tag">${a.price.toLocaleString()}만/㎡</span>`:''}
+      </div>
+    </div>`).join('');
+
+  wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
+
 
 /* ══════════════════════════════════════════
    UI 컨트롤
@@ -2273,7 +2412,7 @@ function newSearch(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('molit-in').value=CFG.molit;
-  initRegionBrowser();
+  initRegionSection();
 });
 </script>
 -e 
