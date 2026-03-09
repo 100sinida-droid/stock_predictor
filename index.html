@@ -881,6 +881,33 @@ body::after{
     </div>
   </div>
 
+  <!-- ── 필터 검색 버튼 ── -->
+  <div id="filter-cta-wrap" style="margin-top:16px;width:100%;max-width:680px;text-align:center;">
+    <button id="filter-cta-btn" onclick="openFilterSection()" style="
+      width:100%;
+      padding:16px 28px;
+      background:rgba(255,255,255,.04);
+      border:1.5px dashed rgba(255,255,255,.2);
+      border-radius:16px;
+      color:rgba(255,255,255,.6);
+      font-size:15px;
+      font-weight:600;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      transition:all .2s;
+      font-family:var(--sans);
+    "
+    onmouseover="this.style.borderColor='rgba(201,168,76,.5)';this.style.color='var(--gold)';this.style.background='rgba(201,168,76,.05)'"
+    onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.6)';this.style.background='rgba(255,255,255,.04)'">
+      <span style="font-size:20px;">🔎</span>
+      <span>전국 <strong id="filter-btn-count" style="color:var(--gold);">46,542</strong>개 아파트 필터 검색</span>
+      <span style="font-size:13px;opacity:.5;margin-left:4px;">▼</span>
+    </button>
+  </div>
+
   <!-- ── 하단: 페르소나 + 배지 + 인기 + KPI ── -->
   <div class="hero-bottom">
     <!-- 내 상황 페르소나 -->
@@ -1068,7 +1095,7 @@ body::after{
 <!-- ══ API MODAL ══ -->
 
 <!-- ══ LOADING ══ -->
-<section class="region-section" id="regionSection" style="display:block;">
+<section class="region-section" id="regionSection" style="display:none;">
   <div class="rs-inner">
     <div class="rs-title">
       <span class="rs-icon">🔎</span>
@@ -2420,12 +2447,28 @@ body.result-visible #regionSection { display: none !important; }
   max-width: 680px !important;
   margin-top: 28px !important;
 }
+
+/* ══ 필터 섹션 (토글식) ══ */
+#regionSection {
+  /* JS로 display 제어 */
+  width: 100% !important;
+  float: none !important;
+  clear: both !important;
+  box-sizing: border-box !important;
+  position: static !important;
+}
+/* filter-cta-btn 화살표 span */
+#filter-cta-btn span:last-child {
+  transition: transform .2s;
+  display: inline-block;
+}
 </style>
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d453822cb7cb33406a188d8890eb0bf3&libraries=services"></script>
 </head>
 <body>
 
 <script defer>
+
 
 
 
@@ -3905,7 +3948,9 @@ function goHome() {
   document.body.classList.remove('result-visible');
   if(g('not-found-panel')) g('not-found-panel').style.display='none';
   if(g('loading')) g('loading').classList.remove('show');
-  // regionSection은 상시 노출
+  // 필터 섹션 닫기
+  const rsGH = document.getElementById('regionSection');
+  if(rsGH) rsGH.style.display='none';
   g('heroSec').style.display='flex';
   g('si').value='';
   window.scrollTo({top:0,behavior:'smooth'});
@@ -3996,6 +4041,8 @@ async function loadFullAptDb() {
     console.log(`[AptScore] 전국DB 로드 완료: +${added}개, 총${APT_DB.length}개`);
     const el = document.getElementById('total-apt-count');
     if (el) el.textContent = APT_DB.length.toLocaleString();
+    const el2 = document.getElementById('filter-btn-count');
+    if (el2) el2.textContent = APT_DB.length.toLocaleString();
     if (typeof buildAcIndex === 'function') buildAcIndex();
     // REGION 갱신
     if (typeof buildRegionIndex === 'function') {
@@ -4211,16 +4258,10 @@ function showPage(page) {
   const heroSec = document.getElementById('heroSec');
   const regionSec = document.getElementById('regionSection');
   if(page==='filter') {
-    // 필터 섹션으로 스크롤
-    if(regionSec) {
-      const top = regionSec.getBoundingClientRect().top + window.scrollY - 70;
-      window.scrollTo({top, behavior:'smooth'});
-    }
-    if(!_aptFullLoaded) {
-      loadFullAptDb().then(()=>{ initSidoChips(); applyFilters(); });
-    } else {
-      initSidoChips(); applyFilters();
-    }
+    openFilterSection();
+    // regionSection이 닫혀있으면 열기
+    const rs2 = document.getElementById('regionSection');
+    if(rs2 && rs2.style.display === 'none') openFilterSection();
   } else if(page==='home') {
     // 홈으로 스크롤
     const result2 = document.getElementById('result');
@@ -4548,6 +4589,43 @@ function filterByGrade(grade) {
 function showDbPanel() {
   const cnt = APT_DB ? APT_DB.length.toLocaleString() : '로딩 중';
   toast(`🏢 전국 DB: ${cnt}단지 로드됨`, 'ok');
+}
+
+
+function openFilterSection() {
+  const rs = document.getElementById('regionSection');
+  const btn = document.getElementById('filter-cta-btn');
+  const wrap = document.getElementById('filter-cta-wrap');
+  if (!rs) return;
+
+  const isOpen = rs.style.display !== 'none';
+  if (isOpen) {
+    // 닫기
+    rs.style.display = 'none';
+    if(btn) {
+      btn.querySelector('span:last-child').textContent = '▼';
+      btn.style.borderStyle = 'dashed';
+    }
+  } else {
+    // 열기
+    rs.style.display = 'block';
+    if(btn) {
+      btn.querySelector('span:last-child').textContent = '▲';
+      btn.style.borderStyle = 'solid';
+      btn.style.borderColor = 'rgba(201,168,76,.4)';
+      btn.style.color = 'var(--gold)';
+    }
+    // 스크롤
+    setTimeout(() => {
+      rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+    // DB 로드 + 필터 초기화
+    if (!_aptFullLoaded) {
+      loadFullAptDb().then(() => { initSidoChips(); applyFilters(); });
+    } else {
+      initSidoChips(); applyFilters();
+    }
+  }
 }
 
 </script>
