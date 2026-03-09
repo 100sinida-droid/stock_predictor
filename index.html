@@ -1194,6 +1194,7 @@ body::after{
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 
+
 /* ══════════════════════════════════════════
    RESET & BASE
 ══════════════════════════════════════════ */
@@ -2382,137 +2383,213 @@ body.result-visible #regionSection { display: none !important; }
 }
 
 
-/* ══ 히어로 레이아웃 재설계 ══ */
 
-/* 히어로: flex col, 상단+하단 분리 */
-.hero {
-  position: relative !important;
-  min-height: calc(100vh - 62px) !important;
+/* ════════════════════════════════════════
+   모바일 최적화 통합 CSS (최종)
+════════════════════════════════════════ */
+
+/* ── body ── */
+html, body {
+  overflow-x: hidden !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+body { display: block !important; }
+
+/* ── NAV ── */
+.nav {
+  position: fixed !important;
+  top: 0; left: 0; right: 0;
+  height: 56px !important;
   display: flex !important;
-  flex-direction: column !important;
   align-items: center !important;
-  justify-content: flex-start !important;
-  padding: 0 !important;
-  width: 100% !important;
+  padding: 0 16px !important;
+  gap: 8px !important;
+  background: rgba(7,9,15,.96) !important;
+  backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(255,255,255,.07) !important;
+  z-index: 1000 !important;
   box-sizing: border-box !important;
-  float: none !important;
-  clear: both !important;
 }
-
-/* 상단: 타이틀 + 검색창 → 화면 중앙에 배치 */
-.hero-top {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: calc(100vh - 62px);
-  padding: 60px 24px 40px;
-  width: 100%;
-  box-sizing: border-box;
+.nav-logo { flex-shrink: 0 !important; }
+.nav-logo span { font-size: 15px !important; }
+.nav > div:nth-child(2) {
+  flex: 1 !important;
+  display: flex !important;
+  justify-content: center !important;
+  gap: 6px !important;
 }
-
-/* 하단: 페르소나 + 배지 + 인기 + KPI */
-.hero-bottom {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  width: 100%;
-  padding: 20px 24px 60px;
-  box-sizing: border-box;
-  background: rgba(0,0,0,.15);
-  border-top: 1px solid rgba(255,255,255,.06);
-  gap: 20px;
+.nav-tab {
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
 }
-
-/* 검색 가능 단지 배지 */
-#apt-count-badge {
-  display: flex;
-  justify-content: center;
+.nav-db-status {
+  flex-shrink: 0 !important;
+  font-size: 11px !important;
+  white-space: nowrap !important;
+  max-width: 90px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
-.apt-count-inner {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(212,166,84,.1);
-  border: 1px solid rgba(212,166,84,.3);
-  border-radius: 20px;
-  padding: 7px 20px;
-}
+#db-label { display: none; }
 
-/* 검색창 최대 너비 확대 */
-.search-outer {
-  width: 100% !important;
-  max-width: 680px !important;
-  margin-top: 28px !important;
-}
-
-/* ══ 필터 섹션 (토글식) ══ */
-#regionSection {
-  /* JS로 display 제어 */
-  width: 100% !important;
-  float: none !important;
-  clear: both !important;
-  box-sizing: border-box !important;
-  position: static !important;
-}
-/* filter-cta-btn 화살표 span */
-#filter-cta-btn span:last-child {
-  transition: transform .2s;
-  display: inline-block;
-}
-
-/* ══ 레이아웃 최종 수정 ══ */
-
-/* body는 단순 블록 스택 */
-body { display: block !important; overflow-x: hidden; }
-
-/* heroSec: 전체 너비 블록, flex column */
+/* ── HERO SECTION ── */
 #heroSec {
   display: flex !important;
   flex-direction: column !important;
   width: 100% !important;
-  min-height: calc(100vh - 62px) !important;
+  padding-top: 56px !important; /* nav 높이 보정 */
+  box-sizing: border-box !important;
   position: relative !important;
-  z-index: 1 !important;
 }
 
-/* hero-top: 화면 1페이지 */
+/* hero-top: 검색창 중심, 뷰포트 꽉 채움 */
 .hero-top {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  min-height: calc(100vh - 62px) !important;
-  padding: 60px 24px 48px !important;
+  min-height: calc(100vh - 56px) !important;
+  padding: 40px 20px 36px !important;
   text-align: center !important;
   width: 100% !important;
   box-sizing: border-box !important;
 }
 
-/* filter-cta-wrap: hero-top 안 검색창 바로 아래 */
-#filter-cta-wrap {
-  position: static !important;
+/* 타이틀 */
+.hero-badge {
+  font-size: 11px !important;
+  padding: 5px 14px !important;
+  margin-bottom: 20px !important;
+}
+.hero-h1 {
+  font-size: clamp(32px, 9vw, 64px) !important;
+  line-height: 1.15 !important;
+  margin-bottom: 14px !important;
+  letter-spacing: -1px !important;
+}
+.hero-sub {
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  color: rgba(255,255,255,.5) !important;
+  margin-bottom: 0 !important;
+}
+.hero-sub br { display: none; }
+.hero-sub strong { display: block; margin-top: 4px; }
+
+/* 검색창 */
+.search-outer {
   width: 100% !important;
-  max-width: 680px !important;
-  margin: 12px auto 0 !important;
+  max-width: 100% !important;
+  margin-top: 24px !important;
   box-sizing: border-box !important;
 }
+.search-box {
+  display: flex !important;
+  gap: 8px !important;
+  background: rgba(255,255,255,.06) !important;
+  border: 1px solid rgba(201,168,76,.35) !important;
+  border-radius: 16px !important;
+  padding: 8px 8px 8px 16px !important;
+  align-items: center !important;
+}
+.search-input {
+  font-size: 15px !important;
+  padding: 8px 0 !important;
+}
+.search-go {
+  flex-shrink: 0 !important;
+  padding: 10px 18px !important;
+  font-size: 14px !important;
+  border-radius: 12px !important;
+  white-space: nowrap !important;
+}
 
-/* hero-bottom: hero-top 바로 아래 */
+/* 필터 CTA 버튼 */
+#filter-cta-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 12px 0 0 !important;
+  box-sizing: border-box !important;
+}
+#filter-cta-btn {
+  width: 100% !important;
+  padding: 14px 20px !important;
+  font-size: 14px !important;
+  border-radius: 14px !important;
+  gap: 8px !important;
+}
+
+/* hero-bottom */
 .hero-bottom {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   width: 100% !important;
-  padding: 32px 24px 60px !important;
+  padding: 28px 20px 48px !important;
   box-sizing: border-box !important;
   border-top: 1px solid rgba(255,255,255,.06) !important;
-  gap: 20px !important;
+  gap: 18px !important;
 }
 
-/* regionSection: heroSec 아래 독립 full-width 블록 */
+/* 페르소나 버튼 */
+.hero-persona-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+.hero-persona-label {
+  width: 100% !important;
+  text-align: center !important;
+  margin-bottom: 4px !important;
+  font-size: 12px !important;
+}
+.persona-btn {
+  padding: 7px 14px !important;
+  font-size: 12px !important;
+  border-radius: 20px !important;
+}
+
+/* 단지 수 배지 */
+#apt-count-badge { width: 100% !important; }
+.apt-count-inner {
+  display: inline-flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 8px 16px !important;
+}
+
+/* 인기 검색 */
+.quick {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  width: 100% !important;
+}
+.q-label { font-size: 11px !important; }
+.q-item {
+  font-size: 12px !important;
+  padding: 5px 12px !important;
+  border-radius: 14px !important;
+}
+
+/* KPI 스탯 */
+.hero-kpi {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+.h-kpi { padding: 12px 8px !important; }
+.kpi-n { font-size: 18px !important; }
+.kpi-l { font-size: 10px !important; }
+
+/* ── FILTER SECTION ── */
 #regionSection {
   display: none;
   width: 100% !important;
@@ -2520,17 +2597,146 @@ body { display: block !important; overflow-x: hidden; }
   float: none !important;
   clear: both !important;
   box-sizing: border-box !important;
-  z-index: 1 !important;
+}
+.region-section {
+  padding: 28px 0 48px !important;
+}
+.rs-inner {
+  padding: 0 16px !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+.rs-title { font-size: 17px !important; }
+.filter-bar {
+  padding: 16px !important;
+  border-radius: 14px !important;
+  gap: 14px !important;
+}
+.filter-sliders {
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+}
+.rs-chips { gap: 5px !important; }
+.rs-chip {
+  font-size: 11px !important;
+  padding: 5px 11px !important;
+}
+#rs-apt-list {
+  grid-template-columns: 1fr !important;
+  gap: 10px !important;
+}
+/* 필터 등급 버튼 */
+.grade-btn {
+  padding: 7px 12px !important;
+  font-size: 11px !important;
 }
 
-/* result: heroSec 숨기고 단독 */
-body.result-visible #heroSec { display: none !important; }
-body.result-visible #regionSection { display: none !important; }
+/* ── RESULT SECTION ── */
 #result { display: none; }
 #result.show { display: block !important; }
+body.result-visible #heroSec { display: none !important; }
+body.result-visible #regionSection { display: none !important; }
 
-/* .hero 레거시 규칙 무력화 */
-section.hero { padding: 0 !important; min-height: unset !important; }
+.rw {
+  max-width: 100% !important;
+  padding: 0 16px !important;
+  box-sizing: border-box !important;
+}
+/* 결과 상단 히어로 */
+.r-hero { padding: 24px 16px !important; }
+.r-hero-grid {
+  grid-template-columns: 1fr !important;
+  gap: 20px !important;
+}
+/* 카드 그리드 */
+.cards {
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+/* 점수 링 */
+.ring { width: 100px !important; height: 100px !important; }
+.ring-n { font-size: 32px !important; }
+/* 탭 */
+.tab-row { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+.tab-btn { font-size: 12px !important; padding: 8px 14px !important; white-space: nowrap !important; }
+
+/* ── 모달 ── */
+.modal-overlay {
+  display: none;
+  align-items: flex-end !important; /* 모바일: 하단 시트 */
+  padding: 0 !important;
+}
+.modal-overlay[style*="flex"] { display: flex !important; }
+.modal-box {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 20px 20px 0 0 !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  padding: 20px 16px !important;
+  box-sizing: border-box !important;
+}
+/* 배틀 입력 */
+.battle-input-row {
+  grid-template-columns: 1fr !important;
+  gap: 12px !important;
+}
+
+/* ── 자동완성 ── */
+.ac {
+  max-height: 240px !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+.ac-item { padding: 12px 16px !important; font-size: 14px !important; }
+
+/* ── 점수 카드 ── */
+#score-card-canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* ── 결과 카드 상세 ── */
+.pc2 { grid-template-columns: 1fr !important; }
+.col2 { grid-template-columns: 1fr !important; }
+
+/* ── 토스트 ── */
+.toast {
+  bottom: 16px !important;
+  right: 16px !important;
+  left: 16px !important;
+  font-size: 13px !important;
+}
+
+/* ── 태블릿 (560px~900px) ── */
+@media (min-width: 560px) and (max-width: 900px) {
+  .hero-h1 { font-size: clamp(36px, 7vw, 56px) !important; }
+  .hero-top { padding: 50px 32px 40px !important; }
+  .search-outer { max-width: 560px !important; }
+  #filter-cta-wrap { max-width: 560px !important; }
+  #rs-apt-list { grid-template-columns: repeat(2, 1fr) !important; }
+  .modal-box { max-width: 520px !important; border-radius: 20px !important; }
+  .modal-overlay { align-items: center !important; }
+  .hero-kpi { grid-template-columns: repeat(4,1fr) !important; }
+}
+
+/* ── 데스크탑 (901px+) ── */
+@media (min-width: 901px) {
+  #db-label { display: inline !important; }
+  .hero-top { padding: 60px 40px 48px !important; }
+  .search-outer { max-width: 680px !important; }
+  #filter-cta-wrap { max-width: 680px !important; }
+  #rs-apt-list { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important; }
+  .modal-box { max-width: 680px !important; border-radius: 20px !important; }
+  .modal-overlay { align-items: center !important; }
+  .filter-sliders { grid-template-columns: repeat(3, 1fr) !important; }
+  .rw { max-width: 860px !important; padding: 0 24px !important; }
+  .cards { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; }
+  .hero-kpi { grid-template-columns: repeat(4,1fr) !important; }
+  .r-hero-grid { grid-template-columns: 1fr 1fr !important; }
+  .battle-input-row { grid-template-columns: 1fr 1fr !important; }
+}
+
 </style>
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d453822cb7cb33406a188d8890eb0bf3&libraries=services"></script>
 </head>
