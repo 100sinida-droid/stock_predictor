@@ -904,7 +904,7 @@ body::after{
     onmouseout="this.style.borderColor='rgba(255,255,255,.2)';this.style.color='rgba(255,255,255,.6)';this.style.background='rgba(255,255,255,.04)'">
       <span style="font-size:20px;">🔎</span>
       <span>전국 <strong id="filter-btn-count" style="color:var(--gold);">46,542</strong>개 아파트 필터 검색</span>
-      <span style="font-size:13px;opacity:.5;margin-left:4px;">▼</span>
+      <span class="filter-arrow" style="font-size:13px;opacity:.6;margin-left:4px;">▼</span>
     </button>
   </div>
 
@@ -1170,11 +1170,11 @@ body::after{
     <div class="filter-group" style="flex-direction:row;align-items:center;gap:8px;flex-wrap:wrap;
     border-top:1px solid rgba(255,255,255,.07);padding-top:14px;">
   <span class="filter-label" style="white-space:nowrap;">🏅 예상등급</span>
-  <button onclick="searchByGrade('S')" class="grade-btn grade-S">S 최우수</button>
-  <button onclick="searchByGrade('A')" class="grade-btn grade-A">A 우수</button>
-  <button onclick="searchByGrade('B')" class="grade-btn grade-B">B 양호</button>
-  <button onclick="searchByGrade('C')" class="grade-btn grade-C">C 보통</button>
-  <button onclick="searchByGrade('D')" class="grade-btn grade-D">D 미흡</button>
+  <button onclick="filterByGrade('S')" class="grade-btn grade-S" data-grade="S">S 최우수</button>
+  <button onclick="filterByGrade('A')" class="grade-btn grade-A" data-grade="A">A 우수</button>
+  <button onclick="filterByGrade('B')" class="grade-btn grade-B" data-grade="B">B 양호</button>
+  <button onclick="filterByGrade('C')" class="grade-btn grade-C" data-grade="C">C 보통</button>
+  <button onclick="filterByGrade('D')" class="grade-btn grade-D" data-grade="D">D 미흡</button>
   <span id="grade-search-status" style="font-size:11px;color:rgba(255,255,255,.4);margin-left:4px;"></span>
 </div>
 <div id="rs-apt-list" style="margin-top:20px;"></div>
@@ -2462,12 +2462,83 @@ body.result-visible #regionSection { display: none !important; }
   transition: transform .2s;
   display: inline-block;
 }
+
+/* ══ 레이아웃 최종 수정 ══ */
+
+/* body는 단순 블록 스택 */
+body { display: block !important; overflow-x: hidden; }
+
+/* heroSec: 전체 너비 블록, flex column */
+#heroSec {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  min-height: calc(100vh - 62px) !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* hero-top: 화면 1페이지 */
+.hero-top {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: calc(100vh - 62px) !important;
+  padding: 60px 24px 48px !important;
+  text-align: center !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* filter-cta-wrap: hero-top 안 검색창 바로 아래 */
+#filter-cta-wrap {
+  position: static !important;
+  width: 100% !important;
+  max-width: 680px !important;
+  margin: 12px auto 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* hero-bottom: hero-top 바로 아래 */
+.hero-bottom {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+  padding: 32px 24px 60px !important;
+  box-sizing: border-box !important;
+  border-top: 1px solid rgba(255,255,255,.06) !important;
+  gap: 20px !important;
+}
+
+/* regionSection: heroSec 아래 독립 full-width 블록 */
+#regionSection {
+  display: none;
+  width: 100% !important;
+  position: static !important;
+  float: none !important;
+  clear: both !important;
+  box-sizing: border-box !important;
+  z-index: 1 !important;
+}
+
+/* result: heroSec 숨기고 단독 */
+body.result-visible #heroSec { display: none !important; }
+body.result-visible #regionSection { display: none !important; }
+#result { display: none; }
+#result.show { display: block !important; }
+
+/* .hero 레거시 규칙 무력화 */
+section.hero { padding: 0 !important; min-height: unset !important; }
 </style>
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d453822cb7cb33406a188d8890eb0bf3&libraries=services"></script>
 </head>
 <body>
 
 <script defer>
+
+
 
 
 
@@ -4033,6 +4104,7 @@ async function loadFullAptDb() {
         const parts = guList[guIdx].split('|');
         city = parts[0]||''; gu = parts[1]||'';
       }
+      if(!/[가-힣]/.test(name)) continue; // 주소형 이름(한글없음) 제외
       APT_DB.push({ n: name, city, gu, dong:'', a:`${city} ${gu}`, la, lo, yr, hh, k:[] });
       added++;
     }
@@ -4185,7 +4257,9 @@ function renderAptCards(reset) {
   }
 
   const GRADE_C = {S:'#d4a654',A:'#3b82f6',B:'#f59e0b',C:'#f97316',D:'#ef4444'};
-  const html = slice.map(a => {
+  const html = slice
+    .filter(a => /[가-힣]/.test(a.n || ''))  // 한글 없는 이름 제외
+    .map(a => {
     const grade = estimateGrade(a);
     const tags = [];
     if(a.yr) tags.push(`<span class="apt-card-tag yr">${a.yr}년</span>`);
@@ -4203,7 +4277,7 @@ function renderAptCards(reset) {
       </div>
       <div class="apt-card-tags">${tags.join('')}</div>
     </div>`;
-  }).join('');
+    }).join('');
 
   if(reset) el.innerHTML = html;
   else el.insertAdjacentHTML('beforeend', html);
@@ -4563,26 +4637,38 @@ function closeBattle() {
 }
 
 function filterByGrade(grade) {
-  if (typeof _gradeFilter === 'undefined') window._gradeFilter = null;
-  
-  // 버튼 토글
-  const btn = document.querySelector(`.grade-btn[data-grade="${grade}"]`);
-  
+  window._gradeFilter = window._gradeFilter || null;
+
+  // 필터 섹션 열기
+  const rs = document.getElementById('regionSection');
+  if (rs && rs.style.display === 'none') {
+    openFilterSection();
+  }
+
   if (_gradeFilter === grade) {
-    // 같은 등급 클릭 → 해제
+    // 같은 등급 → 해제
     _gradeFilter = null;
-    document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('on'));
+    document.querySelectorAll('.grade-btn').forEach(b => {
+      b.classList.remove('on','grade-active');
+    });
     const lbl = document.getElementById('rs-grade-label');
     if(lbl) lbl.textContent = '';
   } else {
-    // 다른 등급 클릭 → 선택
+    // 등급 선택
     _gradeFilter = grade;
-    document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('on'));
-    if(btn) btn.classList.add('on');
+    document.querySelectorAll('.grade-btn').forEach(b => b.classList.remove('on','grade-active'));
+    const btn = document.querySelector(`.grade-btn[data-grade="${grade}"]`);
+    if(btn) btn.classList.add('on','grade-active');
     const lbl = document.getElementById('rs-grade-label');
     if(lbl) lbl.textContent = `${grade}등급 예상 단지 필터 중`;
   }
-  applyFilters();
+
+  // DB 로드 후 필터 적용
+  if (!_aptFullLoaded) {
+    loadFullAptDb().then(() => { initSidoChips(); applyFilters(); });
+  } else {
+    applyFilters();
+  }
 }
 
 
@@ -4595,31 +4681,30 @@ function showDbPanel() {
 function openFilterSection() {
   const rs = document.getElementById('regionSection');
   const btn = document.getElementById('filter-cta-btn');
-  const wrap = document.getElementById('filter-cta-wrap');
   if (!rs) return;
 
   const isOpen = rs.style.display !== 'none';
   if (isOpen) {
-    // 닫기
     rs.style.display = 'none';
     if(btn) {
-      btn.querySelector('span:last-child').textContent = '▼';
+      const arr = btn.querySelector('.filter-arrow');
+      if(arr) arr.textContent = '▼';
       btn.style.borderStyle = 'dashed';
+      btn.style.borderColor = 'rgba(255,255,255,.2)';
+      btn.style.color = 'rgba(255,255,255,.6)';
     }
   } else {
-    // 열기
     rs.style.display = 'block';
     if(btn) {
-      btn.querySelector('span:last-child').textContent = '▲';
+      const arr = btn.querySelector('.filter-arrow');
+      if(arr) arr.textContent = '▲';
       btn.style.borderStyle = 'solid';
-      btn.style.borderColor = 'rgba(201,168,76,.4)';
+      btn.style.borderColor = 'rgba(201,168,76,.45)';
       btn.style.color = 'var(--gold)';
     }
-    // 스크롤
     setTimeout(() => {
       rs.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
-    // DB 로드 + 필터 초기화
+    }, 80);
     if (!_aptFullLoaded) {
       loadFullAptDb().then(() => { initSidoChips(); applyFilters(); });
     } else {
@@ -4627,6 +4712,8 @@ function openFilterSection() {
     }
   }
 }
+
+
 
 </script>
 <script type="text/plain" id="apt-gu">
