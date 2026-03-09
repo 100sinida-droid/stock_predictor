@@ -2205,6 +2205,8 @@ body::after{
 
 
 
+
+
 function getAptRawB64(){
   const el=document.getElementById('apt-raw');
   return el?el.textContent.trim():'';
@@ -2302,6 +2304,10 @@ async function loadFullAptDb(){
       updateAptCountBadge();
       setNavDb('ready',`전국 ${APT_DB.length.toLocaleString()}개`);
       try{if(typeof applyFilters==='function')applyFilters();}catch(e){}
+      // AC 인덱스 빌드 (백그라운드)
+      if(typeof requestIdleCallback!=='undefined'){
+        requestIdleCallback(buildAcIndex,{timeout:3000});
+      }else{setTimeout(buildAcIndex,1000);}
       toast(`🏢 전국 ${APT_DB.length.toLocaleString()}개 단지 검색 가능`,'inf');
       console.log('[AptScore] 전국DB 로드 완료: +'+total_added+'개, 총'+APT_DB.length+'개');
     }catch(e){
@@ -3056,6 +3062,7 @@ const APT_DB=[
 {k:['검단아이파크','검단신도시아이파크'],n:'검단신도시아이파크',city:'인천',gu:'서구',dong:'당하동',a:'인천 서구 당하동',la:37.5985,lo:126.6875,yr:2024,st:'검단오류역',sd:500,price:3800,households:1946},
 {k:['평택화양자이','화양자이'],n:'평택화양자이',city:'경기',gu:'평택시',dong:'화양동',a:'경기 평택시 화양동',la:37.0520,lo:126.9748,yr:2024,st:'평택지제역',sd:3000,price:2800,households:1350}
 ];
+const STATIC_DB_COUNT=APT_DB.length;
 
 /* ══════════════════════════════════════════
    지역 분류 (지역 브라우저용)
@@ -3182,52 +3189,119 @@ function findSimilar(q){
 }
 
 /* 자동완성 검색 */
-function searchAC(q){
-  if(!q||q.length<1) return[];
-  const qn=q.replace(/\s+/g,'');
-  const tokens=q.trim().split(/\s+/).filter(Boolean);
-  const seen=new Set(),res=[];
 
-  // 검색 대상: 정적DB + 수집된 전국DB 합산
-  const allSrc=[...APT_DB.filter(a=>a&&a.n),...fullDbApts.filter(a=>!APT_DB.some(d=>d.n===a.n))];
+// ── AC 빠른 검색 (정적DB 421개 즉시 + 전국DB 지연) ──
+let _acIdx = null;  // 전국DB 간이 인덱스 (문자 → 아파트 배열)
+let _acIdxReady = false;
 
-  for(const a of allSrc){
-    if(seen.has(a.n))continue;
-    const nn=a.n.replace(/\s+/g,'');
-    const gu=(a.gu||'').replace(/\s+/g,'');
-    const dong=(a.dong||'').replace(/\s+/g,'');
-    const city=(a.city||'').replace(/\s+/g,'');
-    const kws=(a.k||[]).map(k=>k.replace(/\s+/g,''));
-    const all=nn+gu+dong+city+kws.join('');
-
-    let score=0;
-    if(nn===qn||kws.includes(qn))score=100;
-    else if(nn.startsWith(qn))score=90;
-    else if(nn.includes(qn))score=80;
-    else if(qn.length>=2&&qn.includes(nn))score=70;
-    else if(tokens.length>=2&&tokens.every(t=>all.includes(t)))score=75;
-    else if(tokens.length>=2){
-      const loc=tokens.filter(t=>gu.includes(t)||dong.includes(t)||city.includes(t));
-      const nm=tokens.filter(t=>nn.includes(t)||kws.some(k=>k.includes(t)));
-      if(loc.length>0&&nm.length>0)score=72;
-      // 공공데이터 역순 매칭: "서해그랑블 풍무" → "풍무서해그랑블"
-      if(!score){
-        const allTokensInName=tokens.every(t=>t.length>=2&&nn.includes(t));
-        if(allTokensInName)score=68;
+// 전국DB 인덱스 빌드 (loadFullAptDb 완료 후 호출)
+function buildAcIndex(){
+  if(_acIdxReady) return;
+  _acIdx = new Map();
+  // 청크 단위로 비동기 처리 (UI 블로킹 방지)
+  let _acBuildPos = 0;
+  const CHUNK = 2000;
+  function _buildChunk(deadline){
+    const end = Math.min(_acBuildPos + CHUNK, APT_DB.length);
+    for(let i=_acBuildPos; i<end; i++){
+      const a = APT_DB[i];
+      if(!a||!a.n) continue;
+      const nm = a.n.replace(/\s/g,'');
+      // 2글자 prefix
+      const k2 = nm.substring(0,2);
+      if(!_acIdx.has(k2)) _acIdx.set(k2,[]);
+      _acIdx.get(k2).push(a);
+      // 3글자 prefix
+      if(nm.length>=3){
+        const k3 = nm.substring(0,3);
+        if(!_acIdx.has(k3)) _acIdx.set(k3,[]);
+        _acIdx.get(k3).push(a);
       }
     }
-    else if(kws.some(k=>k.includes(qn)||qn.includes(k)))score=60;
-    // 공공데이터 명칭 직접 매칭 (브랜드 포함 여부)
-    else if(qn.length>=4&&BRANDS.some(b=>{
-      const bn=normName(b);
-      return bn.length>=3&&qn.includes(bn)&&nn.includes(bn);
-    }))score=55;
-    else if(tokens.length===1&&(dong.includes(qn)||gu.includes(qn)||city.includes(qn)))score=40;
-
-    if(score>0){seen.add(a.n);a._score=score;res.push(a);}
+    _acBuildPos = end;
+    if(_acBuildPos < APT_DB.length){
+      // 다음 청크 스케줄
+      if(typeof requestIdleCallback!=='undefined'){
+        requestIdleCallback(_buildChunk,{timeout:500});
+      }else{
+        setTimeout(_buildChunk,10);
+      }
+    }else{
+      _acIdxReady = true;
+      console.log('[AptScore] AC 인덱스 완료:', _acIdx.size, 'keys');
+    }
   }
+  if(typeof requestIdleCallback!=='undefined'){
+    requestIdleCallback(_buildChunk,{timeout:500});
+  }else{
+    setTimeout(_buildChunk,200);
+  }
+}
+
+function searchAC(q){
+  if(!q||q.length<1) return [];
+  const qn = q.replace(/\s+/g,'');
+  const tokens = q.trim().split(/\s+/).filter(Boolean);
+  const seen = new Set(), res = [];
+
+  // ── 1단계: 정적 DB 421개 (항상 즉시) ──
+  const staticDB = APT_DB.slice(0, (typeof STATIC_DB_COUNT!=="undefined"?STATIC_DB_COUNT:500));
+  for(const a of staticDB){
+    if(!a||!a.n||seen.has(a.n)) continue;
+    const score = _scoreAC(a, qn, tokens);
+    if(score > 0){ seen.add(a.n); a._score=score; res.push(a); }
+  }
+
+  // ── 2단계: 전국DB 인덱스 검색 (인덱스 있을 때만) ──
+  if(_acIdxReady && _acIdx && qn.length >= 2){
+    const prefix2 = qn.substring(0,2);
+    const candidates = _acIdx.get(prefix2) || [];
+    // prefix가 없으면 브랜드 등 키워드로도 검색
+    const extraCandidates = qn.length >= 3 ? (_acIdx.get(qn.substring(0,3)) || []) : [];
+    const pool = new Set([...candidates, ...extraCandidates]);
+    let count = 0;
+    for(const a of pool){
+      if(count > 3000) break; // 최대 3000개만
+      if(!a||!a.n||seen.has(a.n)) continue;
+      const score = _scoreAC(a, qn, tokens);
+      if(score > 0){ seen.add(a.n); a._score=score; res.push(a); count++; }
+    }
+  } else if(!_acIdxReady && APT_DB.length > 500){
+    // 인덱스 미완성: 처음 3000개만 선형 검색
+    for(let i=500; i<Math.min(APT_DB.length, 3500); i++){
+      const a = APT_DB[i];
+      if(!a||!a.n||seen.has(a.n)) continue;
+      const score = _scoreAC(a, qn, tokens);
+      if(score > 0){ seen.add(a.n); a._score=score; res.push(a); }
+    }
+  }
+
   res.sort((a,b)=>(b._score||0)-(a._score||0)||(a.n.length-b.n.length));
-  return res.slice(0,15);
+  return res.slice(0,12);
+}
+
+function _scoreAC(a, qn, tokens){
+  const nn = a.n.replace(/\s+/g,'');
+  const gu = (a.gu||'').replace(/\s+/g,'');
+  const dong = (a.dong||'').replace(/\s+/g,'');
+  const city = (a.city||'').replace(/\s+/g,'');
+  const kws = (a.k||[]).map(k=>k.replace(/\s+/g,''));
+  const all = nn+gu+dong+city+kws.join('');
+  let score = 0;
+  if(nn===qn||kws.includes(qn)) score=100;
+  else if(nn.startsWith(qn)) score=90;
+  else if(nn.includes(qn)) score=80;
+  else if(qn.length>=2&&qn.includes(nn)) score=70;
+  else if(tokens.length>=2&&tokens.every(t=>all.includes(t))) score=75;
+  else if(tokens.length>=2){
+    const loc=tokens.filter(t=>gu.includes(t)||dong.includes(t)||city.includes(t));
+    const nm=tokens.filter(t=>nn.includes(t)||kws.some(k=>k.includes(t)));
+    if(loc.length>0&&nm.length>0) score=72;
+    if(!score&&tokens.every(t=>t.length>=2&&nn.includes(t))) score=68;
+  }
+  else if(kws.some(k=>k.includes(qn)||qn.includes(k))) score=60;
+  else if(qn.length>=3&&(dong.includes(qn)||gu.includes(qn)||city.includes(qn))) score=40;
+  return score;
 }
 
 /* ══════════════════════════════════════════
@@ -4535,7 +4609,10 @@ document.getElementById('si').addEventListener('input',e=>{
   const ac=document.getElementById('ac');
   acFocusIdx=-1;
   if(!v.trim()){ac.classList.remove('open');return;}
-  const results=searchAC(v);
+  // debounce: 150ms 내 연속 입력 시 마지막만 실행
+  clearTimeout(window._acTimer);
+  window._acTimer=setTimeout(()=>{
+    const results=searchAC(document.getElementById('si').value);
   if(!results.length){
     ac.innerHTML='<div class="ac-empty">DB에 없습니다 — 분석 시작 버튼을 누르면 전국 검색합니다 🔍</div>';
     ac.classList.add('open');return;
@@ -4558,6 +4635,7 @@ document.getElementById('si').addEventListener('input',e=>{
   }).join('');
   ac.classList.add('open');
 });
+  }, 150);
 
 document.getElementById('si').addEventListener('keydown',e=>{
   const items=document.querySelectorAll('#ac .ac-item');
@@ -5124,6 +5202,8 @@ function applyFiltersWithGrade(){
   const lbl=document.getElementById('rs-count-label');
   if(lbl)lbl.textContent=`${_filteredApts.length.toLocaleString()}개 (예상 ${_gradeFilter}등급)`;
 }
+
+
 
 
 
