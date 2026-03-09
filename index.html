@@ -857,65 +857,74 @@ body::after{
   </div>
 </div>
 <section class="hero" id="heroSec">
-  <div class="hero-badge"><div class="hero-badge-dot"></div>전국 아파트 · 카카오 지도 API 연동</div>
-  <h1 class="hero-h1">당신의 아파트,<br><em>지금 몇 점인가요?</em></h1>
-  <p class="hero-sub">
-    아파트명·동·지역명으로 검색하면 자동완성 목록이 나타납니다.<br>
-    <strong>전국 모든 아파트 실시간 점수 산출</strong>
-  </p>
 
-  <!-- ── 검색창 ── -->
-  <div class="search-outer" id="search-outer">
-    <div class="search-box">
-      <input class="search-input" id="si" type="text"
-        placeholder="아파트명·동·지역 입력 (예: 풍무, 김포, 헬리오시티…)"
-        autocomplete="off">
-      <button class="search-go" id="go-btn" onclick="doSearch()">
-        <span>🔍</span> 분석 시작
-      </button>
+  <!-- ── 상단: 타이틀 + 검색창 ── -->
+  <div class="hero-top">
+    <div class="hero-badge"><div class="hero-badge-dot"></div>전국 아파트 · 카카오 지도 API 연동</div>
+    <h1 class="hero-h1">당신의 아파트,<br><em>지금 몇 점인가요?</em></h1>
+    <p class="hero-sub">
+      아파트명·동·지역명으로 검색하면 자동완성 목록이 나타납니다.<br>
+      <strong>전국 모든 아파트 실시간 점수 산출</strong>
+    </p>
+
+    <!-- 검색창 -->
+    <div class="search-outer" id="search-outer">
+      <div class="search-box">
+        <input class="search-input" id="si" type="text"
+          placeholder="아파트명·동·지역 입력 (예: 풍무, 김포, 헬리오시티…)"
+          autocomplete="off">
+        <button class="search-go" id="go-btn" onclick="doSearch()">
+          <span>🔍</span> 분석 시작
+        </button>
+      </div>
+      <div class="ac" id="ac"></div>
     </div>
-    <div class="ac" id="ac"></div>
   </div>
 
-  <!-- ── 내 상황 페르소나 ── -->
-  <div class="hero-persona-row">
-    <span class="hero-persona-label">내 상황:</span>
-    <button class="persona-btn" data-persona="학부모" onclick="applyPersona('학부모')">👨‍👧 학부모</button>
-    <button class="persona-btn" data-persona="직장인" onclick="applyPersona('직장인')">💼 직장인</button>
-    <button class="persona-btn" data-persona="은퇴세대" onclick="applyPersona('은퇴세대')">🌿 은퇴세대</button>
-    <button class="persona-btn" data-persona="투자자" onclick="applyPersona('투자자')">📈 투자자</button>
-    <button class="persona-btn" data-persona="" onclick="applyPersona(null)" style="opacity:.6;">🔄 기본</button>
+  <!-- ── 하단: 페르소나 + 배지 + 인기 + KPI ── -->
+  <div class="hero-bottom">
+    <!-- 내 상황 페르소나 -->
+    <div class="hero-persona-row">
+      <span class="hero-persona-label">내 상황:</span>
+      <button class="persona-btn" data-persona="학부모" onclick="applyPersona('학부모')">👨‍👧 학부모</button>
+      <button class="persona-btn" data-persona="직장인" onclick="applyPersona('직장인')">💼 직장인</button>
+      <button class="persona-btn" data-persona="은퇴세대" onclick="applyPersona('은퇴세대')">🌿 은퇴세대</button>
+      <button class="persona-btn" data-persona="투자자" onclick="applyPersona('투자자')">📈 투자자</button>
+      <button class="persona-btn" data-persona="" onclick="applyPersona(null)" style="opacity:.6;">🔄 기본</button>
+    </div>
+
+    <!-- 검색 가능 단지 수 배지 -->
+    <div id="apt-count-badge">
+      <span class="apt-count-inner">
+        <span style="font-size:13px;">🏢</span>
+        <span style="color:rgba(255,255,255,.6);font-size:12px;">검색 가능</span>
+        <span id="total-apt-count" style="color:var(--gold);font-size:16px;font-weight:800;letter-spacing:-.5px;">로딩 중</span>
+        <span style="color:rgba(255,255,255,.4);font-size:11px;">단지</span>
+        <span id="db-collect-mini" style="font-size:10px;color:rgba(255,255,255,.3);margin-left:2px;">…</span>
+      </span>
+    </div>
+
+    <!-- 인기 검색 -->
+    <div class="quick">
+      <span class="q-label">인기</span>
+      <button class="q-item" onclick="pickByKey('래미안퍼스티지')">래미안퍼스티지</button>
+      <button class="q-item" onclick="pickByKey('반포자이')">반포자이</button>
+      <button class="q-item" onclick="pickByKey('헬리오시티')">헬리오시티</button>
+      <button class="q-item" onclick="pickByKey('잠실엘스')">잠실엘스</button>
+      <button class="q-item" onclick="pickByKey('마포래미안푸르지오')">마포래미안푸르지오</button>
+    </div>
+
+    <!-- KPI 스탯 -->
+    <div class="hero-kpi">
+      <div class="h-kpi"><div class="kpi-n">7개</div><div class="kpi-l">평가 항목</div></div>
+      <div class="h-kpi"><div class="kpi-n">100점</div><div class="kpi-l">종합 점수</div></div>
+      <div class="h-kpi"><div class="kpi-n">전국</div><div class="kpi-l">모든 아파트</div></div>
+      <div class="h-kpi"><div class="kpi-n">즉시</div><div class="kpi-l">결과 확인</div></div>
+    </div>
   </div>
 
-  <!-- ── 검색 가능 단지 수 배지 ── -->
-  <div id="apt-count-badge" style="margin-top:12px;text-align:center;">
-    <span style="display:inline-flex;align-items:center;gap:8px;background:rgba(212,166,84,.1);border:1px solid rgba(212,166,84,.3);border-radius:20px;padding:7px 20px;cursor:default;">
-      <span style="font-size:13px;">🏢</span>
-      <span style="color:rgba(255,255,255,.6);font-size:12px;">검색 가능</span>
-      <span id="total-apt-count" style="color:var(--gold);font-size:16px;font-weight:800;letter-spacing:-.5px;">로딩 중</span>
-      <span style="color:rgba(255,255,255,.4);font-size:11px;">단지</span>
-      <span id="db-collect-mini" style="font-size:10px;color:rgba(255,255,255,.3);margin-left:2px;">…</span>
-    </span>
-  </div>
-
-  <!-- ── 인기 검색 ── -->
-  <div class="quick">
-    <span class="q-label">인기</span>
-    <button class="q-item" onclick="pickByKey('래미안퍼스티지')">래미안퍼스티지</button>
-    <button class="q-item" onclick="pickByKey('반포자이')">반포자이</button>
-    <button class="q-item" onclick="pickByKey('헬리오시티')">헬리오시티</button>
-    <button class="q-item" onclick="pickByKey('잠실엘스')">잠실엘스</button>
-    <button class="q-item" onclick="pickByKey('마포래미안푸르지오')">마포래미안푸르지오</button>
-  </div>
-
-  <!-- ── KPI 스탯 바 ── -->
-  <div class="hero-kpi">
-    <div class="h-kpi"><div class="kpi-n">7개</div><div class="kpi-l">평가 항목</div></div>
-    <div class="h-kpi"><div class="kpi-n">100점</div><div class="kpi-l">종합 점수</div></div>
-    <div class="h-kpi"><div class="kpi-n">전국</div><div class="kpi-l">모든 아파트</div></div>
-    <div class="h-kpi"><div class="kpi-n">즉시</div><div class="kpi-l">결과 확인</div></div>
-  </div>
 </section>
+
 
 <!-- ══════════════════════════════════
      지역으로 찾기 — 독립 섹션
@@ -2345,12 +2354,79 @@ body.result-visible #regionSection { display: none !important; }
   #rs-apt-list { grid-template-columns: 1fr !important; }
 }
 
+
+/* ══ 히어로 레이아웃 재설계 ══ */
+
+/* 히어로: flex col, 상단+하단 분리 */
+.hero {
+  position: relative !important;
+  min-height: calc(100vh - 62px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  float: none !important;
+  clear: both !important;
+}
+
+/* 상단: 타이틀 + 검색창 → 화면 중앙에 배치 */
+.hero-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: calc(100vh - 62px);
+  padding: 60px 24px 40px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 하단: 페르소나 + 배지 + 인기 + KPI */
+.hero-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 100%;
+  padding: 20px 24px 60px;
+  box-sizing: border-box;
+  background: rgba(0,0,0,.15);
+  border-top: 1px solid rgba(255,255,255,.06);
+  gap: 20px;
+}
+
+/* 검색 가능 단지 배지 */
+#apt-count-badge {
+  display: flex;
+  justify-content: center;
+}
+.apt-count-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(212,166,84,.1);
+  border: 1px solid rgba(212,166,84,.3);
+  border-radius: 20px;
+  padding: 7px 20px;
+}
+
+/* 검색창 최대 너비 확대 */
+.search-outer {
+  width: 100% !important;
+  max-width: 680px !important;
+  margin-top: 28px !important;
+}
 </style>
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d453822cb7cb33406a188d8890eb0bf3&libraries=services"></script>
 </head>
 <body>
 
 <script defer>
+
 
 
 
@@ -4466,6 +4542,12 @@ function filterByGrade(grade) {
     if(lbl) lbl.textContent = `${grade}등급 예상 단지 필터 중`;
   }
   applyFilters();
+}
+
+
+function showDbPanel() {
+  const cnt = APT_DB ? APT_DB.length.toLocaleString() : '로딩 중';
+  toast(`🏢 전국 DB: ${cnt}단지 로드됨`, 'ok');
 }
 
 </script>
