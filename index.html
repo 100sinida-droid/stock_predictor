@@ -924,7 +924,7 @@ body::after{
   <div style="display:flex;gap:12px;align-items:center;margin-bottom:24px;padding:16px 20px;background:rgba(13,17,23,.85);border:1px solid var(--border);border-radius:var(--r2);backdrop-filter:blur(10px);" class="anim">
     <div style="font-size:13px;color:var(--g2);flex-shrink:0;">🔍 다른 아파트</div>
     <div style="flex:1;"><input id="si2" type="text" placeholder="아파트 이름 입력…" autocomplete="off" style="width:100%;height:40px;background:rgba(255,255,255,.06);border:1px solid var(--border-gold);border-radius:var(--r);padding:0 14px;font-size:13px;color:var(--white);outline:none;font-family:var(--sans);"></div>
-    <button onclick="doSearch2()" style="height:40px;padding:0 20px;background:linear-gradient(135deg,var(--gold),#a8722a);color:var(--bg);border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:var(--sans);white-space:nowrap;">분석</button>
+    <button id="go-btn2" onclick="doSearch2()" style="height:40px;padding:0 20px;background:linear-gradient(135deg,var(--gold),#a8722a);color:var(--bg);border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:var(--sans);white-space:nowrap;">분석</button>
     <button onclick="newSearch()" style="height:40px;padding:0 16px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:var(--r);color:var(--g2);font-size:13px;cursor:pointer;font-family:var(--sans);">← 처음으로</button>
   </div>
   <div class="r-hero anim">
@@ -2121,7 +2121,7 @@ body::after{
   <div style="display:flex;gap:12px;align-items:center;margin-bottom:24px;padding:16px 20px;background:rgba(13,17,23,.85);border:1px solid var(--border);border-radius:var(--r2);backdrop-filter:blur(10px);" class="anim">
     <div style="font-size:13px;color:var(--g2);flex-shrink:0;">🔍 다른 아파트</div>
     <div style="flex:1;"><input id="si2" type="text" placeholder="아파트 이름 입력…" autocomplete="off" style="width:100%;height:40px;background:rgba(255,255,255,.06);border:1px solid var(--border-gold);border-radius:var(--r);padding:0 14px;font-size:13px;color:var(--white);outline:none;font-family:var(--sans);"></div>
-    <button onclick="doSearch2()" style="height:40px;padding:0 20px;background:linear-gradient(135deg,var(--gold),#a8722a);color:var(--bg);border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:var(--sans);white-space:nowrap;">분석</button>
+    <button id="go-btn2" onclick="doSearch2()" style="height:40px;padding:0 20px;background:linear-gradient(135deg,var(--gold),#a8722a);color:var(--bg);border:none;border-radius:var(--r);font-size:13px;font-weight:800;cursor:pointer;font-family:var(--sans);white-space:nowrap;">분석</button>
     <button onclick="newSearch()" style="height:40px;padding:0 16px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:var(--r);color:var(--g2);font-size:13px;cursor:pointer;font-family:var(--sans);">← 처음으로</button>
   </div>
   <div class="r-hero anim">
@@ -2195,6 +2195,9 @@ body::after{
 
 
 <script defer>
+
+
+
 
 
 
@@ -4695,26 +4698,28 @@ async function doSearch(){
   if(!name){toast('아파트 이름을 입력하세요','ng');return;}
   if(_searching){toast('검색 중입니다…','inf');return;}
   _searching=true;
+  // ── 모든 UI 상태 초기화 ──
   const g=id=>document.getElementById(id);
   g('ac').classList.remove('open');
-  g('loading').classList.remove('show');
   g('result').classList.remove('show');
   g('not-found-panel').style.display='none';
   if(g('err-box'))g('err-box').classList.remove('show');
+  g('loading').classList.remove('show');
+  g('heroSec').style.display='flex';  // 항상 복구 (result 화면에서 재검색 대비)
   try{
 
   // 1단계: 정적 DB (421개, 즉시)
   const apt=findApt(name);
   if(apt){await runAnalyze(apt);return;}
 
-  // 2단계: 전국 DB 로딩 대기 후 재검색 (최대 1.5초 대기)
+  // 2단계: 전국 DB 로딩 대기 후 재검색
   if(!_aptFullLoaded){
     setMsg('📦 전국 DB 로딩 중…');
-    document.getElementById('heroSec').style.display='none';
-    document.getElementById('loading').classList.add('show');
+    g('heroSec').style.display='none';
+    g('loading').classList.add('show');
     await loadFullAptDb();
-    document.getElementById('loading').classList.remove('show');
-    document.getElementById('heroSec').style.display='flex';
+    g('loading').classList.remove('show');
+    g('heroSec').style.display='flex';
     const apt2=findApt(name);
     if(apt2){await runAnalyze(apt2);return;}
   }
@@ -4722,58 +4727,52 @@ async function doSearch(){
   // 3단계: fullDbApts 퍼지검색 (46,482개)
   if(fullDbApts.length>0){
     const qn=name.replace(/\s/g,'');
-    // 완전일치
-    let fromFull=APT_DB.find(a=>a&&a.n&&a.n.replace(/\s/g,'')=== qn);
-    // 포함 (검색어 3자 이상)
+    let fromFull=APT_DB.find(a=>a&&a.n&&a.n.replace(/\s/g,'')===qn);
     if(!fromFull&&qn.length>=3)
       fromFull=APT_DB.find(a=>a&&a.n&&a.n.replace(/\s/g,'').includes(qn));
-    // 역포함 (단지명이 검색어에 포함, 4자 이상)
     if(!fromFull&&qn.length>=4)
       fromFull=APT_DB.find(a=>{if(!a||!a.n)return false;const an=a.n.replace(/\s/g,'');return an.length>=4&&qn.includes(an);});
-    // 토큰 2개 이상 일치
     if(!fromFull&&qn.length>=5){
       const toks=(qn.match(/[가-힣a-zA-Z0-9]{2,}/g)||[]);
-      fromFull=APT_DB.find(a=>{
-        const an=a.n.replace(/\s/g,'');
-        return toks.filter(t=>an.includes(t)).length>=2;
-      });
+      fromFull=APT_DB.find(a=>{const an=a.n.replace(/\s/g,'');return toks.filter(t=>an.includes(t)).length>=2;});
     }
-    // matchAptName 퍼지 매칭
     if(!fromFull) fromFull=APT_DB.find(a=>matchAptName(name,a));
     if(fromFull){await runAnalyze(fromFull);return;}
   }
 
-  // 3단계: 공공데이터 통합 검색 (JSONP, 지역기반 즉시수집)
-  document.getElementById('heroSec').style.display='none';
-  document.getElementById('loading').classList.add('show');
+  // 4단계: 공공데이터 검색
+  setMsg(`🔍 "${name}" 검색 중…`);
+  g('heroSec').style.display='none';
+  g('loading').classList.add('show');
   const pubApt=await searchAptByName(name);
   if(pubApt&&pubApt.n){
-    document.getElementById('loading').classList.remove('show');
+    g('loading').classList.remove('show');
+    g('heroSec').style.display='flex';
     toast(`📍 ${pubApt.n} 검색됨`,'inf');
     await runAnalyze(pubApt);return;
   }
 
-  // 4단계: 카카오 API 검색
-  setMsg(`🔍 "${name}" 카카오 검색 중…`);
+  // 5단계: 카카오 API 검색
   const kakaoApt=await kakaoSearchApt(name);
   if(kakaoApt){
-    document.getElementById('loading').classList.remove('show');
+    g('loading').classList.remove('show');
+    g('heroSec').style.display='flex';
     toast(`📍 ${kakaoApt.n} 검색됨 — 분석 시작`,'inf');
-    await runAnalyze(kakaoApt);
-    return;
+    await runAnalyze(kakaoApt);return;
   }
 
-  // 4단계: OSM 폴백
+  // 6단계: OSM 폴백
   const osmApt=await osmSearchApt(name);
   if(osmApt){
-    document.getElementById('loading').classList.remove('show');
-    await runAnalyze(osmApt);
-    return;
+    g('loading').classList.remove('show');
+    g('heroSec').style.display='flex';
+    await runAnalyze(osmApt);return;
   }
 
-  document.getElementById('loading').classList.remove('show');
-  document.getElementById('heroSec').style.display='flex';
-      showNotFound(name);
+  // 검색 실패
+  g('loading').classList.remove('show');
+  g('heroSec').style.display='flex';
+  showNotFound(name);
   }finally{_searching=false;}
 }
 
@@ -4850,12 +4849,16 @@ function setLoadingVisible(v){
 }
 
 async function runAnalyze(apt){
-  document.getElementById('heroSec').style.display='none';
-  document.getElementById('not-found-panel').style.display='none';
-  document.getElementById('loading').classList.add('show');
-  document.getElementById('result').classList.remove('show');
-  document.getElementById('err-box').classList.remove('show');
-  document.getElementById('go-btn').disabled=true;
+  const _g=id=>document.getElementById(id);
+  // 이전 화면 모두 초기화
+  _g('heroSec').style.display='none';
+  _g('not-found-panel').style.display='none';
+  _g('result').classList.remove('show');
+  if(_g('err-box'))_g('err-box').classList.remove('show');
+  // loading 표시
+  _g('loading').classList.add('show');
+  if(_g('go-btn'))_g('go-btn').disabled=true;
+  if(_g('go-btn2'))_g('go-btn2').disabled=true;
   try{
     const R=await analyze(apt);
     document.getElementById('loading').classList.remove('show');
@@ -4870,13 +4873,14 @@ async function runAnalyze(apt){
     const eb=document.getElementById('err-box');
     eb.innerHTML=`⚠️ 분석 오류: ${err.message}`;eb.classList.add('show');
     toast('분석 실패','ng');
-  }finally{document.getElementById('go-btn').disabled=false;}
+  }finally{const _f=id=>document.getElementById(id);if(_f('go-btn'))_f('go-btn').disabled=false;if(_f('go-btn2'))_f('go-btn2').disabled=false;}
 }
 
 function doSearch2(){
   const v=document.getElementById('si2').value.trim();
   if(!v){toast('아파트 이름을 입력하세요','ng');return;}
-  document.getElementById('si').value=v;doSearch();
+  document.getElementById('si').value=v;
+  doSearch();
 }
 function newSearch(){
   document.getElementById('result').classList.remove('show');
@@ -4888,6 +4892,16 @@ function newSearch(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   REGION=buildRegionIndex();
+  // si2 (result화면 검색창) Enter 키
+  const si2el=document.getElementById('si2');
+  if(si2el){
+    si2el.addEventListener('keydown',e=>{if(e.key==='Enter')doSearch2();});
+  }
+  // si (메인 검색창) Enter 이미 있는지 확인 후 추가
+  const siel=document.getElementById('si');
+  if(siel){
+    siel.addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+  }
   const mi=document.getElementById('molit-in');
   if(mi) mi.value=CFG.molit;
   initFilterSection();
@@ -5110,6 +5124,9 @@ function applyFiltersWithGrade(){
   const lbl=document.getElementById('rs-count-label');
   if(lbl)lbl.textContent=`${_filteredApts.length.toLocaleString()}개 (예상 ${_gradeFilter}등급)`;
 }
+
+
+
 
 
 
