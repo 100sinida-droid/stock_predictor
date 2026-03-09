@@ -605,7 +605,7 @@ body::after{
   .h-kpi:last-child{border-bottom:none;}
 }
 </style>
-<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=cdab16e154b37e68a32ae0e6d9d91b9d&libraries=services"></script>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d453822cb7cb33406a188d8890eb0bf3&libraries=services"></script>
 </head>
 <body>
 
@@ -949,6 +949,7 @@ body::after{
         <div class="r-name" id="r-name">아파트명</div>
         <div class="r-addr"><span>📍</span><span id="r-addr">주소</span></div>
         <div class="mini-bars" id="mini-bars"></div>
+        <div id="r-meta-extra" style="font-size:12px;color:var(--gold);margin-bottom:6px;font-weight:600;letter-spacing:.3px;"></div>
         <div class="r-meta">📅 분석일시: <span id="r-date"></span> &nbsp;·&nbsp; 데이터: 자체 DB + 국토교통부</div>
         <div id="kakao-map-wrap" style="margin-top:16px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.08);display:none;">
           <div id="kakao-map" style="width:100%;height:260px;"></div>
@@ -1013,6 +1014,7 @@ body::after{
 const CFG={
   molit:'fad551728c95a236e14821d54bccaada546838a751e426dc9df4a3e813bb51e9',
   kakao:'cdab16e154b37e68a32ae0e6d9d91b9d',
+  kakaoJs:'d453822cb7cb33406a188d8890eb0bf3',
   ok(){return !!this.molit;},
   kakaoOk(){return !!this.kakao;},
 };
@@ -1126,13 +1128,35 @@ function normCity(s){
 }
 function seededRand(s){let h=0;for(let i=0;i<s.length;i++)h=Math.imul(31,h)+s.charCodeAt(i)|0;return(h>>>0)/4294967296;}
 function makeKws(n){
-  const s=new Set([n]);
-  ['호반써밋','래미안','자이','아이파크','힐스테이트','푸르지오','e편한세상','롯데캐슬','더샵','SK뷰','리센츠','엘스','파크리오','위브','두산','한양수자인'].forEach(b=>{
-    if(n.includes(b)){const p=n.slice(0,n.indexOf(b)).trim();if(p)s.add(p);s.add(b);}
+  const s=new Set([n, n.replace(/\s/g,'')]);
+  // 확장된 브랜드 목록
+  const BRD=['호반써밋','래미안','자이','아이파크','힐스테이트','푸르지오',
+    'e편한세상','롯데캐슬','더샵','SK뷰','리센츠','엘스','파크리오','위브',
+    '두산위브','한양수자인','서해그랑블','서해','그랑블','포레나','에코델타',
+    '아크로','원베일리','디에이치','센트럴파크','어반센트로','호반베르디움',
+    '대방노블랜드','금호어울림','부영','우남','현대','삼성래미안','GS자이',
+    'HDC아이파크','포스코더샵','동원로얄듀크','양우내안애','제일풍경채'];
+  BRD.forEach(b=>{
+    if(n.includes(b)){
+      const idx=n.indexOf(b);
+      const pre=n.slice(0,idx).trim();   // 브랜드 앞 지역명
+      const suf=n.slice(idx+b.length).trim(); // 브랜드 뒤 타입명
+      if(pre) s.add(pre);
+      s.add(b);
+      if(pre&&suf) s.add(pre+b+suf);
+      if(pre) s.add(b+pre); // 역순도 추가
+    }
   });
-  const w=n.match(/[가-힣]+/g)||[];
-  if(w.length>=2)s.add(w.slice(0,2).join(''));
-  return[...s];
+  // 한글 단어 2자 이상 조합
+  const w=n.replace(/[a-zA-Z]/g,' ').match(/[가-힣]{2,}/g)||[];
+  w.forEach(ww=>s.add(ww));
+  if(w.length>=2){
+    s.add(w[0]+w[1]);
+    s.add(w.join(''));
+  }
+  // 숫자 제거 버전 (1단지 → 단지명)
+  s.add(n.replace(/[0-9]/g,'').replace(/단지/g,'').trim());
+  return[...s].filter(k=>k.length>=2);
 }
 function toAptEntry(item){
   const name=(item.kaptName||item.name||'').trim();if(!name)return null;
@@ -1147,6 +1171,7 @@ function toAptEntry(item){
     lo:+(blo+(seededRand(name+'lo')-0.5)*0.35).toFixed(4),
     yr:item.yr||0,st:item.st||'',sd:item.sd||9999,price:item.price||0,
     code:item.kaptCode||item.code||name,
+    kaptCode:item.kaptCode||null,   // 기본정보 API 조회용
   };
 }
 
@@ -1851,8 +1876,18 @@ function searchAC(q){
       const loc=tokens.filter(t=>gu.includes(t)||dong.includes(t)||city.includes(t));
       const nm=tokens.filter(t=>nn.includes(t)||kws.some(k=>k.includes(t)));
       if(loc.length>0&&nm.length>0)score=72;
+      // 공공데이터 역순 매칭: "서해그랑블 풍무" → "풍무서해그랑블"
+      if(!score){
+        const allTokensInName=tokens.every(t=>t.length>=2&&nn.includes(t));
+        if(allTokensInName)score=68;
+      }
     }
     else if(kws.some(k=>k.includes(qn)||qn.includes(k)))score=60;
+    // 공공데이터 명칭 직접 매칭 (브랜드 포함 여부)
+    else if(qn.length>=4&&BRANDS.some(b=>{
+      const bn=normName(b);
+      return bn.length>=3&&qn.includes(bn)&&nn.includes(bn);
+    }))score=55;
     else if(tokens.length===1&&(dong.includes(qn)||gu.includes(qn)||city.includes(qn)))score=40;
 
     if(score>0){seen.add(a.n);a._score=score;res.push(a);}
@@ -2066,14 +2101,30 @@ function scoreAmenity(la,lo,apt){
 }
 
 function scoreBuilding(apt,recs){
-  let yr=apt.yr;
-  const yrRecs=recs.filter(r=>r.buildYear>1970).map(r=>r.buildYear);
-  if(yrRecs.length) yr=Math.round(yrRecs.reduce((a,b)=>a+b)/yrRecs.length);
-  const age=new Date().getFullYear()-yr;
-  return{s:Math.round(Math.max(0,Math.min(100,(35-age)/35*100))*10)/10,d:{
-    '건축년도':yr+'년','연식':age+'년',
-    '상태':age<=5?'신축':age<=10?'준신축':age<=20?'양호':age<=30?'노후':'재건축검토',
-    '재건축가능성':age>=30?'높음(30년+)':age>=20?'보통':'낮음',
+  // 우선순위: 기본정보API > 실거래buildYear > DB yr
+  let yr=apt.yr||0;
+  if(!yr||yr<1960){
+    const yrRecs=recs.filter(r=>r.buildYear>1960&&r.buildYear<2030).map(r=>r.buildYear);
+    if(yrRecs.length){
+      const freq={};yrRecs.forEach(y=>freq[y]=(freq[y]||0)+1);
+      yr=parseInt(Object.entries(freq).sort((a,b)=>b[1]-a[1])[0][0]);
+    }
+  }
+  if(!yr||yr<1960) yr=2000;
+  apt.yr=yr; // 최종 연도 업데이트
+  
+  const thisYear=new Date().getFullYear();
+  const age=thisYear-yr;
+  const score=Math.round(Math.max(0,Math.min(100,(35-age)/35*100)));
+  const state=age<=5?'신축':age<=10?'준신축':age<=15?'양호':age<=25?'보통':age<=35?'노후':'구축';
+  
+  return{s:score,d:{
+    '건축년도':yr+'년',
+    '연식':age+'년',
+    '상태':state,
+    '세대수':apt.households?apt.households.toLocaleString()+'세대':'정보없음',
+    '시공사':apt.builder||'정보없음',
+    '데이터출처':apt.households?'국토부 기본정보API':'DB/실거래 추정',
   }};
 }
 
@@ -2199,6 +2250,115 @@ function recentMonths(n){
   for(let i=0;i<n;i++){const t=new Date(d.getFullYear(),d.getMonth()-i,1);r.push(`${t.getFullYear()}${String(t.getMonth()+1).padStart(2,'0')}`);}
   return r;
 }
+
+/* ══ 아파트명 정규화 매칭 (공공데이터 ↔ DB) ══ */
+/* ══ 공동주택 기본정보 API ══ */
+async function fetchAptBasisInfo(kaptCode){
+  if(!kaptCode||!CFG.ok()) return null;
+  const BASE='https://apis.data.go.kr/1613000/AptBasisInfoServiceV3/getAphusBassInfoV3';
+  const url=`${BASE}?kaptCode=${kaptCode}&serviceKey=${encodeURIComponent(CFG.molit)}`;
+  // JSONP
+  const jr=await new Promise(res=>{
+    const cb='_basis_'+Date.now();
+    const t=setTimeout(()=>{delete window[cb];document.getElementById(cb)?.remove();res(null);},8000);
+    window[cb]=function(d){
+      clearTimeout(t);delete window[cb];document.getElementById(cb)?.remove();
+      try{
+        const it=d?.response?.body?.item||d?.body?.item||null;
+        if(!it){res(null);return;}
+        const ud=it.kaptUsedate||'';
+        res({yr:ud?parseInt(ud.slice(0,4),10):0,households:parseInt(it.kaptdaCnt||'0',10)||0,
+          builder:(it.kaptBcompany||it.kaptAcompany||'').trim(),name:(it.kaptName||'').trim(),
+          addr:(it.doroJuso||it.kaptAddr||'').trim(),
+          area60:parseInt(it.kaptMparea_60||'0',10)||0,area85:parseInt(it.kaptMparea_85||'0',10)||0});
+      }catch{res(null);}
+    };
+    const s=document.createElement('script');s.id=cb;
+    s.src=url+'&_callback='+cb;
+    s.onerror=()=>{clearTimeout(t);delete window[cb];s.remove();res(null);};
+    document.head.appendChild(s);
+  });
+  if(jr) return jr;
+  // 프록시 폴백
+  for(const px of[`https://corsproxy.io/?${encodeURIComponent(url)}`,`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`]){
+    try{
+      const r=await fetch(px,{signal:AbortSignal.timeout(8000)});
+      if(!r.ok)continue;
+      const txt=await r.text();
+      if(!txt.includes('<kaptName>'))continue;
+      const xml=new DOMParser().parseFromString(txt,'text/xml');
+      const g=n=>xml.querySelector(n)?.textContent?.trim()||'';
+      const ud=g('kaptUsedate');
+      return{yr:ud?parseInt(ud.slice(0,4),10):0,households:parseInt(g('kaptdaCnt')||'0',10)||0,
+        builder:g('kaptBcompany')||g('kaptAcompany'),name:g('kaptName'),
+        addr:g('doroJuso')||g('kaptAddr'),
+        area60:parseInt(g('kaptMparea_60')||'0',10)||0,area85:parseInt(g('kaptMparea_85')||'0',10)||0};
+    }catch(e){}
+  }
+  return null;
+}
+const _basisCache={};
+async function getAptBasisInfo(apt){
+  const code=apt.kaptCode||apt.code||null;
+  if(!code||typeof code!=='string'||!code.startsWith('A')) return null;
+  if(_basisCache[code]) return _basisCache[code];
+  const info=await fetchAptBasisInfo(code);
+  if(info) _basisCache[code]=info;
+  return info;
+}
+
+
+const BRANDS=['래미안','자이','아이파크','힐스테이트','푸르지오','e편한세상','롯데캐슬',
+  '더샵','SK뷰','리센츠','엘스','파크리오','위브','호반써밋','서해그랑블','서해','그랑블',
+  '한양수자인','두산위브','포레나','아크로','원베일리','디에이치','어반센트로','호반베르디움',
+  '대방노블랜드','금호어울림','제일풍경채','동원로얄듀크','양우내안애'];
+
+function normName(n){
+  return (n||'').replace(/[\s·.\-_]/g,'').toLowerCase();
+}
+
+function extractTokens(n){
+  const nn=normName(n);
+  const tokens=new Set();
+  BRANDS.forEach(b=>{
+    const bn=normName(b);
+    if(nn.includes(bn)&&bn.length>=3) tokens.add(bn);
+  });
+  const words=(n||'').replace(/[a-zA-Z]/g,' ').match(/[가-힣]{2,}/g)||[];
+  words.forEach(w=>tokens.add(w));
+  const mixed=(n||'').match(/[a-zA-Z]+[가-힣]+/g)||[];
+  mixed.forEach(m=>tokens.add(normName(m)));
+  tokens.add(nn);
+  return tokens;
+}
+
+function matchAptName(pubName,apt){
+  if(!pubName||!apt) return false;
+  const pn=normName(pubName);
+  const dn=normName(apt.n);
+  // 1. 완전일치
+  if(pn===dn) return true;
+  // 2. 포함관계 (4자 이상)
+  if(pn.length>=4&&dn.includes(pn)) return true;
+  if(dn.length>=4&&pn.includes(dn)) return true;
+  // 3. 앞 3자 일치
+  if(pn.length>=3&&dn.length>=3&&pn.slice(0,3)===dn.slice(0,3)) return true;
+  // 4. 토큰 교집합
+  const pt=extractTokens(pubName);
+  const dt=extractTokens(apt.n);
+  let inter=0;
+  pt.forEach(t=>{if(t.length>=3&&dt.has(t))inter++;});
+  if(inter>=2) return true;
+  // 5. 브랜드 공통 + 지역 연관
+  const brandOk=BRANDS.some(b=>{const bn=normName(b);return bn.length>=3&&pn.includes(bn)&&dn.includes(bn);});
+  if(brandOk&&inter>=1) return true;
+  // 6. apt.k 키워드 매칭
+  const kws=(apt.k||[]).map(normName);
+  if(kws.some(k=>k.length>=3&&(pn.includes(k)||k.includes(pn)))) return true;
+  return false;
+}
+
+
 async function fetchMolit(lawd,ym){
   if(!CFG.ok()) return Promise.resolve([]);
   // JSONP 방식 → 실패시 CORS 프록시 XML 폴백
@@ -2360,20 +2520,23 @@ async function analyze(apt){
     // 6개월 동시 병렬 요청 — 순차 대비 6배 빠름
     const results=await Promise.all(mons.map(ym=>fetchMolit(lawd,ym)));
     for(const d of results){
-      recs.push(...d.filter(r=>{
-        const rn=r.name.replace(/\s/g,'');
-        const qn=pfx;
-        // 매칭: 앞4자 포함 OR 키워드 포함 OR 아파트명이 검색어 포함
-        return rn.includes(qn)||
-               rn.includes(qn.slice(0,3))||
-               aptKeys.some(k=>k.length>=3&&rn.includes(k.replace(/\s/g,'').slice(0,4)))||
-               qn.includes(rn.slice(0,4));
-      }));
+      recs.push(...d.filter(r=>matchAptName(r.name,apt)));
     }
   }
 
   // 실거래 데이터로 건축연도 보완 (카카오/전국DB 모두 적용)
   if(!apt.yr||apt.yr<1970||apt.isKakao) await enrichKakaoApt(apt,recs);
+  // 공동주택 기본정보 API (kaptCode 있는 경우)
+  if(apt.kaptCode&&apt.kaptCode.startsWith('A')){
+    setMsg('🏢 단지 기본정보 조회…');
+    const bi=await getAptBasisInfo(apt);
+    if(bi){
+      if(bi.yr>1960) apt.yr=bi.yr;
+      if(bi.households>0) apt.households=bi.households;
+      if(bi.builder) apt.builder=bi.builder;
+      console.log('[AptScore] 기본정보:',bi.name,bi.yr+'년',bi.households+'세대');
+    }
+  }
   lastRecs=recs;
 
   setMsg('🏙️ 핵심시설 거리 계산…'); const p2=scoreHubs(apt.la,apt.lo,apt);
@@ -2434,8 +2597,17 @@ async function fetchMolitProxy(lawd,ym){
 function render(R){
   const gc=GRADE[R.grade];
   document.getElementById('r-name').textContent=R.name;
-  document.getElementById('r-addr').innerHTML=R.addr+
-    '';
+  document.getElementById('r-addr').innerHTML=R.addr;
+  // 세대수·시공사 보조 정보 표시
+  const metaEl=document.getElementById('r-meta-extra');
+  if(metaEl){
+    const apt=currentApt||{};
+    const parts=[];
+    if(apt.yr>1960) parts.push(`🏗️ ${apt.yr}년 준공`);
+    if(apt.households>0) parts.push(`🏘️ ${apt.households.toLocaleString()}세대`);
+    if(apt.builder) parts.push(`🔨 ${apt.builder}`);
+    metaEl.textContent=parts.join('  ·  ');
+  }
   document.getElementById('r-score').textContent=R.total;
   document.getElementById('r-score').style.color=gc;
   document.getElementById('r-grade').textContent=R.grade;
