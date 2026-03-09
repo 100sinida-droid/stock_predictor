@@ -1325,7 +1325,7 @@ const APT_DB=[
   {k:['장기역센트럴자이'],n:'장기역센트럴자이',city:'경기',gu:'김포시',dong:'장기동',a:'경기 김포시 장기동',la:37.6307,lo:126.7266,yr:2020,st:'장기역',sd:300,price:2600},
   {k:['풍무e편한세상','풍무편한세상'],n:'풍무e편한세상',city:'경기',gu:'김포시',dong:'풍무동',a:'경기 김포시 풍무동',la:37.6182,lo:126.758,yr:2010,st:'풍무역',sd:350,price:2400},
   {k:['풍무롯데캐슬'],n:'풍무롯데캐슬',city:'경기',gu:'김포시',dong:'풍무동',a:'경기 김포시 풍무동',la:37.62,lo:126.753,yr:2012,st:'풍무역',sd:400,price:2500},
-  {k:['풍무서해그랑블','서해그랑블'],n:'풍무서해그랑블',city:'경기',gu:'김포시',dong:'풍무동',a:'경기 김포시 풍무동 304',la:37.6185,lo:126.7478,yr:2008,st:'풍무역',sd:850,price:2400},
+  {k:['풍무서해그랑블','서해그랑블','양도마을서해','양도마을서해아파트','풍무동서해'],n:'풍무서해그랑블',city:'경기',gu:'김포시',dong:'풍무동',a:'경기 김포시 풍무동 147',la:37.6193,lo:126.7497,yr:2000,st:'풍무역',sd:900,price:2400,households:1265},
   {k:['풍무자이'],n:'풍무자이',city:'경기',gu:'김포시',dong:'풍무동',a:'경기 김포시 풍무동',la:37.6195,lo:126.7558,yr:2023,st:'풍무역',sd:200,price:3400},
   {k:['다산아이비플레이스자이','다산자이아이비플레이스'],n:'다산자이아이비플레이스',city:'경기',gu:'남양주시',dong:'다산동',a:'경기 남양주시 다산동',la:37.6049,lo:127.2105,yr:2019,st:'다산역',sd:300,price:2800},
   {k:['별내역더넥스트자이','별내역자이더넥스트'],n:'별내역자이더넥스트',city:'경기',gu:'남양주시',dong:'별내동',a:'경기 남양주시 별내동',la:37.639,lo:127.138,yr:2022,st:'별내역',sd:400,price:3000},
@@ -2306,58 +2306,200 @@ function recentMonths(n){
 }
 
 /* ══ 아파트명 정규화 매칭 (공공데이터 ↔ DB) ══ */
-/* ══ 공공데이터 아파트명 직접 검색 ══ */
+/* ══════════════════════════════════════════════════════
+   전국 아파트 통합 검색 엔진
+   
+   전략:
+   1. kaptName 직접검색 (완전일치)
+   2. 검색어에서 지역명 추출 → 해당 시군구 전체 apt 수집 → 퍼지매칭
+   3. 지역명 없으면 주요 지역 병렬 검색
+   4. 수집된 결과를 fullDbApts에 캐시 (다음 검색 재사용)
+══════════════════════════════════════════════════════ */
+
+// 시군구→LAWD 역방향 매핑 (동명→시군구)
+const DONG_TO_LAWD={
+  '풍무동':'41570','고촌읍':'41570','사우동':'41570','장기동':'41570','구래동':'41570',
+  '마산동':'41570','양촌읍':'41570','북변동':'41570','감정동':'41570',
+  '분당구':'41135','수지구':'41465','기흥구':'41463','처인구':'41461','수원':'41110',
+  '판교':'41135','광교':'41115','동탄':'41590','평택':'41220',
+  '은행동':'44130','천안':'44130','아산':'44200',
+  '해운대':'26350','수영구':'26500','연제구':'26470',
+  '유성구':'30200','서구_대전':'30170',
+  '수성구':'27260','달서구':'27290',
+};
+
+// 검색어에서 지역 LAWD 코드 추출
+function extractLawdFromQuery(q){
+  const LAWD_MAP=Object.assign({},LAWD,DONG_TO_LAWD);
+  const qn=q.replace(/\s/g,'');
+  // 1. 직접 매핑
+  for(const [k,v] of Object.entries(LAWD_MAP)){
+    const kn=k.replace(/_\S+$/,''); // _서울 등 제거
+    if(qn.includes(kn)&&kn.length>=2) return v;
+  }
+  return null;
+}
+
+// 시군구 전체 아파트 목록 즉시 수집 (페이지1만, 빠름)
+async function fetchAptsByLawd(lawd, maxPages=3){
+  const BASE='https://apis.data.go.kr/1613000/AptListService2/getAptList';
+  const rows=100;
+  const results=[];
+  
+  for(let page=1;page<=maxPages;page++){
+    const cb='_aptList_'+lawd+'_p'+page+'_'+Date.now();
+    const url=`${BASE}?serviceKey=${encodeURIComponent(CFG.molit)}&sggCd=${lawd}&pageNo=${page}&numOfRows=${rows}&_callback=${cb}`;
+    const items=await new Promise(res=>{
+      const t=setTimeout(()=>{delete window[cb];document.getElementById(cb)?.remove();res([]);},10000);
+      window[cb]=function(d){
+        clearTimeout(t);delete window[cb];document.getElementById(cb)?.remove();
+        try{
+          const raw=d?.response?.body?.items?.item||d?.body?.items?.item||[];
+          res(Array.isArray(raw)?raw:(raw?[raw]:[]));
+        }catch{res([]);}
+      };
+      const s=document.createElement('script');s.id=cb;s.src=url;
+      s.onerror=()=>{clearTimeout(t);delete window[cb];s.remove();res([]);};
+      document.head.appendChild(s);
+    });
+    results.push(...items);
+    if(items.length<rows) break; // 마지막 페이지
+  }
+  return results;
+}
+
+// 수집된 raw 항목 → apt 객체 변환
+function rawToApt(it){
+  const addr=(it.doroJuso||it.kaptAddr||'').trim();
+  const parts=addr.replace(/\s+/g,' ').split(' ');
+  const city=parts[0]||'';
+  const gu=parts[1]||'';
+  const dong=parts[2]||'';
+  const la=parseFloat(it.bjdLat||0)||0;
+  const lo=parseFloat(it.bjdLon||0)||0;
+  const nm=(it.kaptName||'').trim();
+  const yr=it.kaptUsedate?parseInt(it.kaptUsedate.slice(0,4),10):0;
+  return{
+    k:makeKws(nm),n:nm,city,gu,dong,a:addr,
+    la,lo,yr,st:'',sd:9999,price:0,
+    kaptCode:it.kaptCode||null,
+    households:parseInt(it.kaptdaCnt||'0',10)||0,
+    isKakao:false,
+  };
+}
+
+// 수집 apt에서 퍼지 매칭
+function fuzzyMatchApt(apts, query){
+  const qn=query.replace(/\s/g,'').toLowerCase();
+  // 점수 계산
+  const scored=apts.map(it=>{
+    const nm=(it.kaptName||it.n||'').replace(/\s/g,'').toLowerCase();
+    let score=0;
+    if(nm===qn) score=100;
+    else if(nm.includes(qn)) score=90;
+    else if(qn.includes(nm)&&nm.length>=3) score=80;
+    else{
+      // 토큰 매칭: qn을 2자 이상 단위로 쪼개서
+      const tokens=[];
+      for(let i=0;i<qn.length-1;i++) tokens.push(qn.slice(i,i+3));
+      const matchCnt=tokens.filter(t=>nm.includes(t)).length;
+      score=matchCnt>=2?60+(matchCnt*5):matchCnt>=1?40:0;
+      // 브랜드 매칭
+      if(!score) score=BRANDS.some(b=>{const bn=normName(b);return bn.length>=3&&qn.includes(bn)&&nm.includes(bn);})?55:0;
+    }
+    return{score,it};
+  }).filter(x=>x.score>=40).sort((a,b)=>b.score-a.score);
+  return scored.length?scored[0].it:null;
+}
+
+// 통합 검색 메인 함수
 async function searchAptByName(name){
   if(!CFG.ok()) return null;
-  const cb='_aptNm_'+Date.now();
-  const url='https://apis.data.go.kr/1613000/AptListService2/getAptList'
-    +`?serviceKey=${encodeURIComponent(CFG.molit)}&kaptName=${encodeURIComponent(name)}&pageNo=1&numOfRows=5&_callback=${cb}`;
-  const result=await new Promise(res=>{
-    const t=setTimeout(()=>{delete window[cb];document.getElementById(cb)?.remove();res(null);},9000);
-    window[cb]=function(d){
-      clearTimeout(t);delete window[cb];document.getElementById(cb)?.remove();
-      try{
-        const raw=d?.response?.body?.items?.item||d?.body?.items?.item||[];
-        const arr=Array.isArray(raw)?raw:(raw?[raw]:[]);
-        if(!arr.length){res(null);return;}
-        const qn=name.replace(/\s/g,'');
-        arr.sort((a,b)=>{
-          const score=s=>{const n=(s.kaptName||'').replace(/\s/g,'');return n===qn?100:n.includes(qn)?80:qn.includes(n)?60:0;};
-          return score(b)-score(a);
-        });
-        const it=arr[0];
-        if(!it){res(null);return;}
-        const addr=(it.doroJuso||it.kaptAddr||'').trim();
-        const parts=addr.split(' ');
-        res({
-          n:(it.kaptName||name).trim(),
-          a:addr,city:parts[0]||'',gu:parts[1]||'',dong:parts[2]||'',
-          la:parseFloat(it.bjdLat||0)||0,lo:parseFloat(it.bjdLon||0)||0,
-          yr:it.kaptUsedate?parseInt(it.kaptUsedate.slice(0,4),10):0,
-          st:'',sd:9999,price:0,
-          kaptCode:it.kaptCode||null,
-          households:parseInt(it.kaptdaCnt||'0',10)||0,
-          isKakao:false,
-        });
-      }catch(e){res(null);}
-    };
-    const s=document.createElement('script');s.id=cb;s.src=url;
-    s.onerror=()=>{clearTimeout(t);delete window[cb];s.remove();res(null);};
-    document.head.appendChild(s);
-  });
-  if(!result) return null;
-  // 좌표 없으면 카카오 지오코딩 보완
-  if((!result.la||!result.lo)&&CFG.kakaoOk()){
-    try{
-      const r=await fetch(
-        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(result.n+' 아파트')}&size=1`,
-        {headers:{Authorization:`KakaoAK ${CFG.kakao}`},signal:AbortSignal.timeout(5000)}
-      );
-      if(r.ok){const d=await r.json();if(d.documents?.length){result.la=parseFloat(d.documents[0].y)||0;result.lo=parseFloat(d.documents[0].x)||0;}}
-    }catch(e){}
+  const BASE='https://apis.data.go.kr/1613000/AptListService2/getAptList';
+  
+  setMsg(`🔍 "${name}" 공공DB 검색 중…`);
+  
+  // ── 방법 1: kaptName 직접검색 (완전/부분일치 시도)
+  const variants=[name, name.replace(/\s/g,'')];
+  // 앞 2글자, 앞 3글자 시도
+  if(name.length>=4) variants.push(name.slice(0,4));
+  if(name.length>=3) variants.push(name.slice(0,3));
+  
+  for(const variant of variants){
+    const cb='_aptNm_'+Date.now();
+    const url=`${BASE}?serviceKey=${encodeURIComponent(CFG.molit)}&kaptName=${encodeURIComponent(variant)}&pageNo=1&numOfRows=10&_callback=${cb}`;
+    const items=await new Promise(res=>{
+      const t=setTimeout(()=>{delete window[cb];document.getElementById(cb)?.remove();res([]);},8000);
+      window[cb]=function(d){
+        clearTimeout(t);delete window[cb];document.getElementById(cb)?.remove();
+        try{
+          const raw=d?.response?.body?.items?.item||d?.body?.items?.item||[];
+          res(Array.isArray(raw)?raw:(raw?[raw]:[]));
+        }catch{res([]);}
+      };
+      const s=document.createElement('script');s.id=cb;s.src=url;
+      s.onerror=()=>{clearTimeout(t);delete window[cb];s.remove();res([]);};
+      document.head.appendChild(s);
+    });
+    if(items.length){
+      const best=fuzzyMatchApt(items,name);
+      if(best){
+        const apt=rawToApt(best);
+        // fullDbApts 캐시에 추가
+        if(!fullDbApts.some(a=>a.n===apt.n)) fullDbApts.push(apt);
+        return apt;
+      }
+    }
+    if(variant===name) continue; // 첫번째 실패시 다음 시도
+    break; // 짧은 변형은 한번만
   }
-  return result;
+  
+  // ── 방법 2: 지역명 추출 → 해당 시군구 전체 수집 → 퍼지매칭
+  const lawd=extractLawdFromQuery(name);
+  if(lawd){
+    setMsg(`🔍 "${name}" 지역 DB 수집 중…`);
+    const allItems=await fetchAptsByLawd(lawd,5);
+    if(allItems.length){
+      // fullDbApts 캐시 업데이트
+      for(const it of allItems){
+        const nm=(it.kaptName||'').trim();
+        if(nm&&!fullDbApts.some(a=>a.n===nm)) fullDbApts.push(rawToApt(it));
+      }
+      const best=fuzzyMatchApt(allItems,name);
+      if(best) return rawToApt(best);
+    }
+  }
+  
+  // ── 방법 3: fullDbApts에서 재검색 (방법2로 캐시 채운 후)
+  if(fullDbApts.length>0){
+    const qn=name.replace(/\s/g,'');
+    const fromFull=fullDbApts.find(a=>{
+      const an=a.n.replace(/\s/g,'');
+      return an===qn||an.includes(qn)||(qn.length>=4&&qn.includes(an))||
+        matchAptName(a.n,{n:name,k:[name],gu:'',dong:'',city:''});
+    });
+    if(fromFull) return fromFull;
+  }
+  
+  // ── 방법 4: 주요 시군구 병렬 즉시 수집 (지역 불명)
+  // 서울+경기 주요 코드 병렬 검색 (각 1페이지만, 빠름)
+  setMsg(`🔍 "${name}" 전국 광역 검색 중…`);
+  const majorLawds=['11680','11710','11650','11440','11200','41570','41135','41460','41590','41280','41570','28260'];
+  const parallelItems=await Promise.all(
+    majorLawds.map(lwd=>fetchAptsByLawd(lwd,1))
+  );
+  for(const items of parallelItems){
+    for(const it of items){
+      const nm=(it.kaptName||'').trim();
+      if(nm&&!fullDbApts.some(a=>a.n===nm)) fullDbApts.push(rawToApt(it));
+    }
+    const best=fuzzyMatchApt(items,name);
+    if(best) return rawToApt(best);
+  }
+  
+  return null;
 }
+
 
 /* ══ 공동주택 기본정보 API ══ */
 async function fetchAptBasisInfo(kaptCode){
@@ -3261,18 +3403,17 @@ async function doSearch(){
     if(fromFull){runAnalyze(fromFull);return;}
   }
 
-  // 3단계: 공공데이터 아파트명 검색 (JSONP, 카카오 불필요)
+  // 3단계: 공공데이터 통합 검색 (JSONP, 지역기반 즉시수집)
   document.getElementById('heroSec').style.display='none';
   document.getElementById('loading').classList.add('show');
-  setMsg(`🔍 "${name}" 공공 DB 검색 중…`);
   const pubApt=await searchAptByName(name);
   if(pubApt&&pubApt.n){
     document.getElementById('loading').classList.remove('show');
-    toast(`📍 ${pubApt.n} 공공DB 검색됨`,'inf');
+    toast(`📍 ${pubApt.n} 검색됨`,'inf');
     runAnalyze(pubApt);return;
   }
 
-  // 4단계: 카카오 API 검색 (실시간 좌표 포함)
+  // 4단계: 카카오 API 검색
   setMsg(`🔍 "${name}" 카카오 검색 중…`);
   const kakaoApt=await kakaoSearchApt(name);
   if(kakaoApt){
