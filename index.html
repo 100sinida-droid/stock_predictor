@@ -848,9 +848,9 @@ body::after{
     <span style="display:inline-flex;align-items:center;gap:8px;background:rgba(212,166,84,.1);border:1px solid rgba(212,166,84,.3);border-radius:20px;padding:7px 20px;cursor:default;">
       <span style="font-size:13px;">🏢</span>
       <span style="color:rgba(255,255,255,.6);font-size:12px;">검색 가능</span>
-      <span id="total-apt-count" style="color:var(--gold);font-size:16px;font-weight:800;letter-spacing:-.5px;">421</span>
+      <span id="total-apt-count" style="color:var(--gold);font-size:16px;font-weight:800;letter-spacing:-.5px;">로딩 중</span>
       <span style="color:rgba(255,255,255,.4);font-size:11px;">단지</span>
-      <span id="db-collect-mini" style="font-size:10px;color:rgba(255,255,255,.3);margin-left:2px;"></span>
+      <span id="db-collect-mini" style="font-size:10px;color:rgba(255,255,255,.3);margin-left:2px;">…</span>
     </span>
   </div>
 
@@ -1060,9 +1060,12 @@ async function loadFullAptDb(){
       }
       APT_DB.push(...add);fullDbApts.push(...add);
       _aptFullLoaded=true;dbDone=true;
+      // REGION 인덱스 재빌드 (전국DB 추가 후)
+      try{Object.assign(REGION,buildRegionIndex());}catch(e){}
       applyFullDb();updateAptCountBadge();
       setNavDb('ready',`전국 ${APT_DB.length.toLocaleString()}개`);
-      toast(`🏢 전국 ${APT_DB.length.toLocaleString()}개 단지 검색 가능`,'inf');
+      toast(`🏢 전국 ${APT_DB.length.toLocaleString()}개 단지 로드 완료`,'inf');
+      console.log(`[AptScore] 전국DB 로드: +${add.length}개 추가, 총 ${APT_DB.length}개`);
     }catch(e){console.error('전국DB오류',e);}
   })();
   return _aptFullPromise;
@@ -1248,8 +1251,10 @@ function updateAptCountBadge(){
 
 function applyFullDb(){
   if(!fullDbApts.length)return;
+  // null 항목 제거
+  for(let i=APT_DB.length-1;i>=0;i--){if(!APT_DB[i]||!APT_DB[i].n)APT_DB.splice(i,1);}
   const ex=new Set(APT_DB.map(a=>a.n));
-  const nw=fullDbApts.filter(a=>a&&a.n&&!ex.has(a.n));
+  const nw=fullDbApts.filter(a=>a&&a.n&&a.city!==undefined&&!ex.has(a.n));
   if(nw.length){APT_DB.push(...nw);}
   const lbl=`전국 ${APT_DB.length.toLocaleString()}개`;
   setNavDb(dbDone?'ready':'collecting',lbl);
@@ -1817,9 +1822,10 @@ const APT_DB=[
 function buildRegionIndex(){
   const cities={},gus={};
   for(const a of APT_DB){
+    if(!a||!a.city||!a.n) continue; // null 안전
     if(!cities[a.city]) cities[a.city]=new Set();
-    cities[a.city].add(a.gu);
-    const key=a.city+'|'+a.gu;
+    cities[a.city].add(a.gu||'');
+    const key=(a.city)+'|'+(a.gu||'');
     if(!gus[key]) gus[key]=[];
     gus[key].push(a);
   }
@@ -1874,23 +1880,24 @@ function findApt(q){
   const tokens=q.trim().split(/\s+/).map(t=>t.replace(/\s/g,''));
 
   // 1) 정확한 이름 일치
-  let found=APT_DB.find(a=>a.n.replace(/\s+/g,'')=== qn);
+  let found=APT_DB.find(a=>a&&a.n&&a.n.replace(/\s+/g,'')=== qn);
   if(found) return found;
 
   // 2) 키워드 완전 일치
-  found=APT_DB.find(a=>(a.k||[]).some(k=>k.replace(/\s+/g,'')=== qn));
+  found=APT_DB.find(a=>a&&(a.k||[]).some(k=>k&&k.replace(/\s+/g,'')=== qn));
   if(found) return found;
 
   // 3) 단일 토큰: 이름 포함
   if(tokens.length===1){
-    found=APT_DB.find(a=>a.n.replace(/\s+/g,'').includes(qn));
+    found=APT_DB.find(a=>a&&a.n&&a.n.replace(/\s+/g,'').includes(qn));
     if(found) return found;
   }
 
   // 4) 멀티 토큰: 모든 토큰이 아파트 정보에 포함
   if(tokens.length>=2){
     found=APT_DB.find(a=>{
-      const all=(a.n+a.gu+a.dong+a.city+(a.k||[]).join('')).replace(/\s+/g,'');
+      if(!a||!a.n) return false;
+      const all=(a.n+(a.gu||'')+(a.dong||'')+(a.city||'')+(a.k||[]).join('')).replace(/\s+/g,'');
       return tokens.every(t=>all.includes(t));
     });
     if(found) return found;
@@ -1941,7 +1948,7 @@ function searchAC(q){
   const seen=new Set(),res=[];
 
   // 검색 대상: 정적DB + 수집된 전국DB 합산
-  const allSrc=[...APT_DB,...fullDbApts.filter(a=>!APT_DB.some(d=>d.n===a.n))];
+  const allSrc=[...APT_DB.filter(a=>a&&a.n),...fullDbApts.filter(a=>!APT_DB.some(d=>d.n===a.n))];
 
   for(const a of allSrc){
     if(seen.has(a.n))continue;
@@ -3480,13 +3487,13 @@ async function doSearch(){
   if(fullDbApts.length>0){
     const qn=name.replace(/\s/g,'');
     // 완전일치
-    let fromFull=APT_DB.find(a=>a.n.replace(/\s/g,'')=== qn);
+    let fromFull=APT_DB.find(a=>a&&a.n&&a.n.replace(/\s/g,'')=== qn);
     // 포함 (검색어 3자 이상)
     if(!fromFull&&qn.length>=3)
-      fromFull=APT_DB.find(a=>a.n.replace(/\s/g,'').includes(qn));
+      fromFull=APT_DB.find(a=>a&&a.n&&a.n.replace(/\s/g,'').includes(qn));
     // 역포함 (단지명이 검색어에 포함, 4자 이상)
     if(!fromFull&&qn.length>=4)
-      fromFull=APT_DB.find(a=>{const an=a.n.replace(/\s/g,'');return an.length>=4&&qn.includes(an);});
+      fromFull=APT_DB.find(a=>{if(!a||!a.n)return false;const an=a.n.replace(/\s/g,'');return an.length>=4&&qn.includes(an);});
     // 토큰 2개 이상 일치
     if(!fromFull&&qn.length>=5){
       const toks=(qn.match(/[가-힣a-zA-Z0-9]{2,}/g)||[]);
@@ -3651,8 +3658,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   setTimeout(loadFullAptDb, 200);
   // 공공API 백그라운드 수집은 전국 DB 없을 때만
   // setTimeout(initFullDb, 800);  // 내장 DB로 대체
-  // 초기 카운트 표시
-  setTimeout(updateAptCountBadge, 100);
+  // 초기 카운트 표시 (loadFullAptDb 완료 후 자동 갱신됨)
+  updateAptCountBadge();
   
   // 결과 화면의 si2 자동완성
   const si2=document.getElementById('si2');
