@@ -843,6 +843,17 @@ body::after{
     <div class="ac" id="ac"></div>
   </div>
 
+  <!-- ── 검색 가능 단지 수 배지 ── -->
+  <div id="apt-count-badge" style="margin-top:14px;text-align:center;">
+    <span style="display:inline-flex;align-items:center;gap:8px;background:rgba(212,166,84,.1);border:1px solid rgba(212,166,84,.3);border-radius:20px;padding:7px 20px;cursor:default;">
+      <span style="font-size:13px;">🏢</span>
+      <span style="color:rgba(255,255,255,.6);font-size:12px;">검색 가능</span>
+      <span id="total-apt-count" style="color:var(--gold);font-size:16px;font-weight:800;letter-spacing:-.5px;">421</span>
+      <span style="color:rgba(255,255,255,.4);font-size:11px;">단지</span>
+      <span id="db-collect-mini" style="font-size:10px;color:rgba(255,255,255,.3);margin-left:2px;"></span>
+    </span>
+  </div>
+
   <!-- ── 인기 검색 ── -->
   <div class="quick">
     <span class="q-txt">인기</span>
@@ -1176,6 +1187,21 @@ function toAptEntry(item){
 }
 
 /* ─── APT_DB 병합 ─── */
+function updateAptCountBadge(){
+  const el=document.getElementById('total-apt-count');
+  const mini=document.getElementById('db-collect-mini');
+  if(!el) return;
+  const staticCount=APT_DB.length;
+  const fullCount=fullDbApts.length;
+  const total=staticCount+Math.max(0,fullCount-staticCount);
+  el.textContent=total.toLocaleString();
+  if(mini){
+    if(dbDone) mini.textContent='(수집완료)';
+    else if(fullCount>0) mini.textContent=`(수집중 +${fullCount})`;
+    else mini.textContent='(기본DB)';
+  }
+}
+
 function applyFullDb(){
   if(!fullDbApts.length)return;
   const ex=new Set(APT_DB.map(a=>a.n));
@@ -1183,6 +1209,7 @@ function applyFullDb(){
   if(nw.length){APT_DB.push(...nw);}
   const lbl=`전국 ${APT_DB.length.toLocaleString()}개`;
   setNavDb(dbDone?'ready':'collecting',lbl);
+  updateAptCountBadge();
 }
 
 /* ─── 패널 UI ─── */
@@ -3551,6 +3578,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   initRegionSection();
   // 전국 DB 수집 (백그라운드)
   setTimeout(initFullDb, 800);
+  // 초기 카운트 표시
+  setTimeout(updateAptCountBadge, 100);
   
   // 결과 화면의 si2 자동완성
   const si2=document.getElementById('si2');
