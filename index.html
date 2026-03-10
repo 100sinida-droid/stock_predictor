@@ -3617,14 +3617,19 @@ body.result-visible #regionSection{display:none!important}
 
 
 
+
+
 /* ══════════════════════════════════════════════════════════════
    AptScore v5 — DB 등록 아파트만 분석 / 임의 점수 없음
 ══════════════════════════════════════════════════════════════ */
 
 const CFG={
-  molit:localStorage.getItem('molit')||'',
-  save(k){this.molit=k.trim();localStorage.setItem('molit',k.trim());},
-  ok(){return this.molit.length>10;}
+  // 국토교통부 아파트 매매 실거래가 API 키 (기본 내장)
+  _DEFAULT_KEY:'fad551728c95a236e14821d54bccaada546838a751e426dc9df4a3e813bb51e9',
+  get molit(){ return localStorage.getItem('molit') || this._DEFAULT_KEY; },
+  set molit(v){ localStorage.setItem('molit', v.trim()); },
+  save(k){ const t=k.trim(); localStorage.setItem('molit',t); },
+  ok(){ return (localStorage.getItem('molit')||this._DEFAULT_KEY).length > 10; }
 };
 
 const HUBS=[
@@ -4607,13 +4612,11 @@ function updateDot(){
   const dot=document.getElementById('db-dot');
   const lbl=document.getElementById('db-label');
   if(!dot) return;
-  if(CFG.molit&&CFG.molit.length>10){
-    dot.style.background='#10b981';
-    if(lbl) lbl.textContent='MOLIT 연결됨';
-  } else {
-    dot.style.background='rgba(255,255,255,.3)';
-    if(lbl) lbl.textContent='API 설정';
-  }
+  // 기본 내장 키 포함해서 항상 연결 상태
+  const key = CFG._DEFAULT_KEY || localStorage.getItem('molit') || '';
+  const isConnected = key.length > 10;
+  dot.style.background = isConnected ? '#10b981' : 'rgba(255,255,255,.3)';
+  if(lbl) lbl.textContent = isConnected ? '실거래 연동 ✅' : 'API 설정 필요';
 }
 let toastTm;
 function toast(msg,type='inf'){
@@ -6151,6 +6154,8 @@ function resetBattle() {
   // 인풋 포커스
   if(ia) ia.focus();
 }
+
+
 
 
 
