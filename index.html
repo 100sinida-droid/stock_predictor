@@ -3935,6 +3935,7 @@ H4sIAKJcrmkC/5S9W49dx5Em+u5fUU8zJaB4sPKycuV6pNQ6ttry2LD6gp63AY6AMzieGaAbPedtQFFF
 
 
 
+
 function saveWorkers() {
   const url = document.getElementById('workers-url-in')?.value?.trim();
   if(!url){ toast('Workers URL을 입력하세요','ng'); return; }
@@ -4393,19 +4394,17 @@ function scoreHubs(la, lo, apt){
   const aptCity = (apt && apt.city) || '';
   const aptGu   = (apt && apt.gu)   || '';
 
-  // 1단계: 같은 city + 같은 gu (가장 정확)
+  // 1단계: 같은 city + 같은 gu
   let regionHubs = HUBS.filter(h => h.region === aptCity && h.gu === aptGu);
-  // 2단계: 같은 city 내 (다른 구이지만 같은 광역시/도)
+  // 2단계: 같은 city
   if(!regionHubs.length) regionHubs = HUBS.filter(h => h.region === aptCity);
-  // 3단계: city 매칭 실패 시 → apt.city 부분 포함 검색
-  if(!regionHubs.length && aptCity) {
+  // 3단계: city 부분 일치
+  if(!regionHubs.length && aptCity)
     regionHubs = HUBS.filter(h => aptCity.includes(h.region) || h.region.includes(aptCity));
-  }
-  // 4단계: 여전히 없으면 좌표 기반으로 HUBS 전체에서 300km 이내만 사용
-  if(!regionHubs.length) {
-    regionHubs = HUBS.filter(h => hav(la, lo, h.la, h.lo) <= 300000); // 300km 이내
-  }
-  // 최후 fallback: 전체 중 가장 가까운 것 (있을 수 없지만 안전장치)
+  // 4단계: 300km 이내
+  if(!regionHubs.length)
+    regionHubs = HUBS.filter(h => hav(la,lo,h.la,h.lo) <= 300000);
+  // 최후
   if(!regionHubs.length) regionHubs = HUBS;
 
   const facs = {};
@@ -4415,7 +4414,7 @@ function scoreHubs(la, lo, apt){
   const nearest = sorted[0];
   const dist = nearest?.[1] || 99999;
 
-  // 거리 → 점수 (단위: m)
+  // 거리 → 점수
   let score;
   if      (dist <= 500)   score = 100;
   else if (dist <= 1000)  score = 100 - (dist-500)/500*10;
@@ -4424,21 +4423,22 @@ function scoreHubs(la, lo, apt){
   else if (dist <= 5000)  score = 65  - (dist-3000)/2000*15;
   else if (dist <= 8000)  score = 50  - (dist-5000)/3000*15;
   else if (dist <= 15000) score = 35  - (dist-8000)/7000*15;
-  else                    score = Math.max(10, 20 - (dist-15000)/10000*10);
-
+  else                    score = Math.max(10, 20-(dist-15000)/10000*10);
   score = Math.round(Math.max(0, Math.min(100, score)));
 
   const nearestName = nearest?.[0] || '-';
   const nearestKm   = nearest ? (nearest[1]/1000).toFixed(1) : '-';
-  const d = {
-    detail: [
-      `· 기준범위: ${aptCity || '전국'} 내 업무지구`,
-      `· 가장가까운: ${nearestName}`,
-      `· 거리: ${nearestKm}km`,
-    ].join('\n'),
+
+  // ★ 반환 키를 s/d/facs로 통일 (다른 score 함수와 동일)
+  return {
+    s: score,
+    d: {
+      '기준범위': `${aptCity||'전국'} 내 업무지구`,
+      '가장가까운': nearestName,
+      '거리': `${nearestKm}km`,
+    },
     facs: Object.fromEntries(sorted.slice(0,5)),
   };
-  return {score, d: d.detail, facs: d.facs};
 }
 
 function scoreTransit(apt){
@@ -4689,7 +4689,7 @@ async function fetchMolit(lawd,ym){
 ══════════════════════════════════════════ */
 let lastRecs=[], currentApt=null;
 
-async function analyze(apt){
+async function analyze(apt, mode){
   currentApt=apt;
   setMsg(`✅ DB 매칭: ${apt.n}`);
   await sleep(200);
@@ -4697,7 +4697,7 @@ async function analyze(apt){
   // 실거래 수집
   const lawd=LAWD[apt.gu]||'11680', recs=[];
   if(CFG.ok()){
-    const mons=recentMonths(6);
+    const mons=recentMonths(mode==='battle' ? 3 : 6);
     const pfx=apt.n.replace(/\s/g,'').slice(0,4);
     setMsg('📡 실거래가 조회 중…');
     // 6개월 동시 병렬 요청 (순차 대비 6배 빠름)
@@ -4737,8 +4737,19 @@ async function analyze(apt){
 function render(R){
   const gc=GRADE[R.grade];
   document.getElementById('r-name').textContent=R.name;
-  document.getElementById('r-addr').innerHTML=R.addr+
-    ' <span style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);padding:2px 10px;border-radius:20px;font-size:11px;color:#34d399;margin-left:6px">✓ DB 등록</span>';
+  // 주소 + DB 배지 + 세부정보 (연식, 세대수)
+  const aptInfo = currentApt || {};
+  const addrExtra = [
+    aptInfo.yr ? `${aptInfo.yr}년 준공` : '',
+    aptInfo.hh ? `${aptInfo.hh}세대` : '',
+    aptInfo.st ? `${aptInfo.st} ${aptInfo.sd||''}m` : '',
+  ].filter(Boolean).join(' · ');
+  document.getElementById('r-addr').innerHTML =
+    `<div style="font-size:14px;color:rgba(255,255,255,.7);margin-bottom:4px;">${R.addr}</div>` +
+    `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">` +
+    `<span style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);padding:2px 10px;border-radius:20px;font-size:11px;color:#34d399;">✓ DB 등록</span>` +
+    (addrExtra ? `<span style="font-size:11px;color:rgba(255,255,255,.4);">${addrExtra}</span>` : '') +
+    `</div>`;
   document.getElementById('r-score').textContent=R.total;
   document.getElementById('r-score').style.color=gc;
   document.getElementById('r-grade').textContent=R.grade;
@@ -6028,6 +6039,8 @@ function shareBattleImage() {
   ctx.fillText('⚔️ AptScore 라이벌 배틀 결과', W/2, 36);
 
   const GRADE_COLORS = {S:'#d4a654',A:'#3b82f6',B:'#f59e0b',C:'#f97316',D:'#ef4444'};
+const GRADE_COLOR = GRADE_COLORS; // alias
+
   const getGrade = (r,a) => r?(r.total>=80?'S':r.total>=70?'A':r.total>=60?'B':r.total>=50?'C':'D'):(_scoreCache.get(a.n)?.grade || estimateGrade(a));
   const getScore = (r) => r?r.total:null;
 
@@ -6548,7 +6561,7 @@ async function doBattleAnalyze(side) {
   toast(`${apt.n} 분석 중…`,'inf');
 
   try {
-    const R = await analyze(apt);
+    const R = await analyze(apt, 'battle');
     if(side==='A') _battleRA=R; else _battleRB=R;
     renderBattleCard(side, apt, R);
     toast(`${apt.n} 분석 완료!`,'ok');
@@ -6791,6 +6804,7 @@ function downloadBattleCard() {
   a.click();
   toast('📸 배틀 이미지 저장됨!','ok');
 }
+
 
 
 
