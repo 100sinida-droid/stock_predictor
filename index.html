@@ -1,14 +1,4 @@
-<!DOCTYP
-<div style="margin-top:12px;">
-  <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px;">🔧 Workers 프록시 URL (실거래 연동용)</div>
-  <div style="display:flex;gap:8px;">
-    <input id="workers-url-in" type="text"
-      placeholder="https://apt-proxy.your-name.workers.dev"
-      style="flex:1;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:12px;outline:none;">
-    <button onclick="saveWorkers()"
-      style="padding:8px 14px;background:rgba(99,102,241,.3);border:1px solid rgba(99,102,241,.5);color:#a5b4fc;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;">저장</button>
-  </div>
-</div>E html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -4006,6 +3996,75 @@ function saveWorkers() {
 
 const CFG={
   // 국토교통부 아파트 매매 실거래가 API 키 (기본 내장)
+  _DEFAULT_KEY:'fad551728c95a236e14821d54bccaada546838a751e426dc9df4a3e813bb51e9<script defer>
+
+
+
+
+
+
+
+function saveWorkers() {
+  const url = document.getElementById('workers-url-in')?.value?.trim();
+  if(!url){ toast('Workers URL을 입력하세요','ng'); return; }
+  if(!url.startsWith('https://')){ toast('https:// 로 시작해야 합니다','ng'); return; }
+  CFG.setWorkers(url);
+  toast('✅ Workers URL 저장됨 — 다음 검색부터 적용됩니다','ok');
+  updateDot();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ══════════════════════════════════════════════════════════════
+   AptScore v5 — DB 등록 아파트만 분석 / 임의 점수 없음
+══════════════════════════════════════════════════════════════ */
+
+const CFG={
+  // 국토교통부 아파트 매매 실거래가 API 키 (기본 내장)
   _DEFAULT_KEY:'fad551728c95a236e14821d54bccaada546838a751e426dc9df4a3e813bb51e9',
   get molit(){ return localStorage.getItem('molit') || this._DEFAULT_KEY; },
   set molit(v){ localStorage.setItem('molit', v.trim()); },
@@ -4017,50 +4076,60 @@ const CFG={
 
 const HUBS=[
   // ── 서울: 구별 핵심 업무지구 ──
-  {n:'강남역',      la:37.4980,lo:127.0276, region:'서울', gu:'강남구'},
-  {n:'삼성역',      la:37.5090,lo:127.0630, region:'서울', gu:'강남구'},
-  {n:'역삼역',      la:37.5001,lo:127.0361, region:'서울', gu:'강남구'},
-  {n:'서초역',      la:37.4836,lo:127.0126, region:'서울', gu:'서초구'},
-  {n:'반포역',      la:37.5040,lo:127.0054, region:'서울', gu:'서초구'},
-  {n:'광화문',      la:37.5752,lo:126.9769, region:'서울', gu:'종로구'},
-  {n:'시청',        la:37.5666,lo:126.9779, region:'서울', gu:'중구'},
-  {n:'을지로',      la:37.5660,lo:126.9900, region:'서울', gu:'중구'},
-  {n:'여의도',      la:37.5219,lo:126.9245, region:'서울', gu:'영등포구'},
-  {n:'영등포역',    la:37.5158,lo:126.9074, region:'서울', gu:'영등포구'},
-  {n:'잠실',        la:37.5133,lo:127.1001, region:'서울', gu:'송파구'},
-  {n:'종로3가',     la:37.5717,lo:126.9920, region:'서울', gu:'종로구'},
-  {n:'구로디지털',  la:37.4853,lo:126.9012, region:'서울', gu:'구로구'},
-  {n:'마포역',      la:37.5572,lo:126.9100, region:'서울', gu:'마포구'},
-  {n:'홍대입구',    la:37.5572,lo:126.9253, region:'서울', gu:'마포구'},
-  {n:'왕십리',      la:37.5610,lo:127.0381, region:'서울', gu:'성동구'},
-  {n:'용산역',      la:37.5300,lo:126.9645, region:'서울', gu:'용산구'},
-  {n:'노원역',      la:37.6556,lo:127.0561, region:'서울', gu:'노원구'},
-  {n:'강동역',      la:37.5301,lo:127.1236, region:'서울', gu:'강동구'},
-  {n:'신도림역',    la:37.5085,lo:126.8912, region:'서울', gu:'구로구'},
-  // ── 경기: 시별 업무지구 ──
-  {n:'판교테크노',  la:37.3943,lo:127.1112, region:'경기', gu:'성남시'},
-  {n:'분당정자',    la:37.3595,lo:127.1154, region:'경기', gu:'성남시'},
-  {n:'수원역',      la:37.2657,lo:127.0007, region:'경기', gu:'수원시'},
-  {n:'수원삼성',    la:37.2635,lo:127.0286, region:'경기', gu:'수원시'},
-  {n:'동탄역',      la:37.2108,lo:127.0780, region:'경기', gu:'화성시'},
-  {n:'기흥역',      la:37.2753,lo:127.1154, region:'경기', gu:'용인시'},
-  {n:'고양일산',    la:37.6765,lo:126.7770, region:'경기', gu:'고양시'},
-  {n:'인천송도',    la:37.3830,lo:126.6565, region:'인천', gu:'연수구'},
-  {n:'인천시청',    la:37.4563,lo:126.7052, region:'인천', gu:'남동구'},
-  {n:'김포공항',    la:37.5583,lo:126.7941, region:'경기', gu:'김포시'},
-  {n:'풍무역',      la:37.6023,lo:126.7478, region:'경기', gu:'김포시'},
+  {n:'강남역',    la:37.4980,lo:127.0276, region:'서울', gu:'강남구'},
+  {n:'삼성역',    la:37.5090,lo:127.0630, region:'서울', gu:'강남구'},
+  {n:'역삼역',    la:37.5001,lo:127.0361, region:'서울', gu:'강남구'},
+  {n:'서초역',    la:37.4836,lo:127.0126, region:'서울', gu:'서초구'},
+  {n:'반포역',    la:37.5040,lo:127.0054, region:'서울', gu:'서초구'},
+  {n:'광화문',    la:37.5752,lo:126.9769, region:'서울', gu:'종로구'},
+  {n:'시청',      la:37.5666,lo:126.9779, region:'서울', gu:'중구'},
+  {n:'을지로',    la:37.5659,lo:126.9880, region:'서울', gu:'중구'},
+  {n:'용산역',    la:37.5298,lo:126.9647, region:'서울', gu:'용산구'},
+  {n:'왕십리',    la:37.5614,lo:127.0367, region:'서울', gu:'성동구'},
+  {n:'여의도',    la:37.5219,lo:126.9245, region:'서울', gu:'영등포구'},
+  {n:'영등포역',  la:37.5157,lo:126.9069, region:'서울', gu:'영등포구'},
+  {n:'마포역',    la:37.5468,lo:126.9521, region:'서울', gu:'마포구'},
+  {n:'홍대입구',  la:37.5572,lo:126.9247, region:'서울', gu:'마포구'},
+  {n:'신도림역',  la:37.5094,lo:126.8916, region:'서울', gu:'구로구'},
+  {n:'구로디지털',la:37.4853,lo:126.9013, region:'서울', gu:'금천구'},
+  {n:'잠실',      la:37.5133,lo:127.0999, region:'서울', gu:'송파구'},
+  {n:'강동역',    la:37.5299,lo:127.1237, region:'서울', gu:'강동구'},
+  {n:'종로3가',   la:37.5719,lo:126.9921, region:'서울', gu:'종로구'},
+  {n:'노원역',    la:37.6553,lo:127.0564, region:'서울', gu:'노원구'},
+
+  // ── 경기 ──
+  {n:'판교테크노', la:37.3952,lo:127.1109, region:'경기', gu:'성남시'},
+  {n:'분당정자',  la:37.3636,lo:127.1090, region:'경기', gu:'성남시'},
+  {n:'수원역',    la:37.2662,lo:127.0000, region:'경기', gu:'수원시'},
+  {n:'수원삼성',  la:37.2636,lo:127.0286, region:'경기', gu:'수원시'},
+  {n:'기흥역',    la:37.2748,lo:127.1157, region:'경기', gu:'용인시'},
+  {n:'동탄역',    la:37.2036,lo:127.0727, region:'경기', gu:'화성시'},
+  {n:'고양일산',  la:37.6577,lo:126.7717, region:'경기', gu:'고양시'},
+  {n:'김포공항',  la:37.5584,lo:126.7917, region:'경기', gu:'김포시'},
+  {n:'풍무역',    la:37.6073,lo:126.7124, region:'경기', gu:'김포시'},
+
+  // ── 인천 ──
+  {n:'인천시청',  la:37.4563,lo:126.7052, region:'인천', gu:'남동구'},
+  {n:'인천송도',  la:37.3825,lo:126.6566, region:'인천', gu:'연수구'},
+
   // ── 부산 ──
-  {n:'부산서면',    la:35.1579,lo:129.0597, region:'부산', gu:'부산진구'},
-  {n:'해운대센텀',  la:35.1693,lo:129.1299, region:'부산', gu:'해운대구'},
-  {n:'부산역',      la:35.1151,lo:129.0421, region:'부산', gu:'동구'},
-  {n:'남포동',      la:35.0981,lo:129.0314, region:'부산', gu:'중구'},
+  {n:'부산서면',  la:35.1579,lo:129.0598, region:'부산', gu:'부산진구'},
+  {n:'해운대센텀',la:35.1695,lo:129.1317, region:'부산', gu:'해운대구'},
+  {n:'부산역',    la:35.1146,lo:129.0420, region:'부산', gu:'동구'},
+  {n:'남포동',    la:35.0985,lo:129.0325, region:'부산', gu:'중구'},
+
   // ── 대구 ──
-  {n:'동성로',      la:35.8694,lo:128.5950, region:'대구', gu:'중구'},
-  {n:'수성구청',    la:35.8571,lo:128.6309, region:'대구', gu:'수성구'},
-  // ── 광주/대전/세종 ──
-  {n:'충장로',      la:35.1481,lo:126.9140, region:'광주', gu:'동구'},
-  {n:'대전둔산',    la:36.3504,lo:127.3845, region:'대전', gu:'서구'},
-  {n:'세종청사',    la:36.4800,lo:127.2890, region:'세종', gu:'세종시'},
+  {n:'동성로',    la:35.8686,lo:128.5934, region:'대구', gu:'중구'},
+  {n:'수성구청',  la:35.8578,lo:128.6300, region:'대구', gu:'수성구'},
+
+  // ── 광주 ──
+  {n:'충장로',    la:35.1477,lo:126.9188, region:'광주', gu:'동구'},
+
+  // ── 대전 ──
+  {n:'대전둔산',  la:36.3504,lo:127.3845, region:'대전', gu:'서구'},
+
+  // ── 세종 ──
+  {n:'세종청사',  la:36.4800,lo:127.2890, region:'세종', gu:'세종시'},
 ];
 
 
@@ -4390,16 +4459,23 @@ const PRICE_MAP={
 };
 
 function scoreHubs(la, lo, apt){
-  // ── 핵심시설 접근성: 같은 구/군 내 업무지구 우선 ──
   const aptCity = (apt && apt.city) || '';
   const aptGu   = (apt && apt.gu)   || '';
 
-  // 1단계: 같은 city + 같은 gu 내 허브
+  // 1단계: 같은 city + 같은 gu (가장 정확)
   let regionHubs = HUBS.filter(h => h.region === aptCity && h.gu === aptGu);
-  // 2단계: 같은 city 내 (gu 제한 없이)
-  if(regionHubs.length === 0) regionHubs = HUBS.filter(h => h.region === aptCity);
-  // 3단계: 전체 fallback
-  if(regionHubs.length === 0) regionHubs = HUBS;
+  // 2단계: 같은 city 내 (다른 구이지만 같은 광역시/도)
+  if(!regionHubs.length) regionHubs = HUBS.filter(h => h.region === aptCity);
+  // 3단계: city 매칭 실패 시 → apt.city 부분 포함 검색
+  if(!regionHubs.length && aptCity) {
+    regionHubs = HUBS.filter(h => aptCity.includes(h.region) || h.region.includes(aptCity));
+  }
+  // 4단계: 여전히 없으면 좌표 기반으로 HUBS 전체에서 300km 이내만 사용
+  if(!regionHubs.length) {
+    regionHubs = HUBS.filter(h => hav(la, lo, h.la, h.lo) <= 300000); // 300km 이내
+  }
+  // 최후 fallback: 전체 중 가장 가까운 것 (있을 수 없지만 안전장치)
+  if(!regionHubs.length) regionHubs = HUBS;
 
   const facs = {};
   for(const h of regionHubs) facs[h.n] = hav(la, lo, h.la, h.lo);
@@ -4408,32 +4484,30 @@ function scoreHubs(la, lo, apt){
   const nearest = sorted[0];
   const dist = nearest?.[1] || 99999;
 
-  // 거리 → 점수
+  // 거리 → 점수 (단위: m)
   let score;
   if      (dist <= 500)   score = 100;
   else if (dist <= 1000)  score = 100 - (dist-500)/500*10;
-  else if (dist <= 2000)  score = 90  - (dist-1000)/1000*12;
-  else if (dist <= 3000)  score = 78  - (dist-2000)/1000*13;
+  else if (dist <= 2000)  score = 90  - (dist-1000)/1000*15;
+  else if (dist <= 3000)  score = 75  - (dist-2000)/1000*10;
   else if (dist <= 5000)  score = 65  - (dist-3000)/2000*15;
   else if (dist <= 8000)  score = 50  - (dist-5000)/3000*15;
-  else if (dist <= 12000) score = 35  - (dist-8000)/4000*15;
-  else                    score = Math.max(5, 20 - (dist-12000)/3000*5);
+  else if (dist <= 15000) score = 35  - (dist-8000)/7000*15;
+  else                    score = Math.max(10, 20 - (dist-15000)/10000*10);
 
-  const d2 = sorted[1]?.[1] || 99999;
-  const bonus = d2 <= 3000 ? 5 : d2 <= 6000 ? 3 : 1;
-  const finalScore = Math.round(Math.max(0, Math.min(100, score + bonus)) * 10) / 10;
+  score = Math.round(Math.max(0, Math.min(100, score)));
 
-  const scopeLabel = regionHubs[0]?.gu === aptGu
-    ? `${aptGu} 내 업무지구`
-    : `${aptCity} 내 업무지구`;
-
-  return{s: finalScore, d:{
-    '기준범위':     scopeLabel,
-    '가장가까운':   nearest?.[0] || '-',
-    '거리':         fd(dist),
-    '2위업무지구':  sorted[1]?.[0] || '-',
-    '2위거리':      fd(d2),
-  }, facs};
+  const nearestName = nearest?.[0] || '-';
+  const nearestKm   = nearest ? (nearest[1]/1000).toFixed(1) : '-';
+  const d = {
+    detail: [
+      `· 기준범위: ${aptCity || '전국'} 내 업무지구`,
+      `· 가장가까운: ${nearestName}`,
+      `· 거리: ${nearestKm}km`,
+    ].join('\n'),
+    facs: Object.fromEntries(sorted.slice(0,5)),
+  };
+  return {score, d: d.detail, facs: d.facs};
 }
 
 function scoreTransit(apt){
@@ -4619,51 +4693,60 @@ async function fetchMolit(lawd,ym){
     + `&LAWD_CD=${lawd}&DEAL_YMD=${ym}`
     + `&numOfRows=1000&pageNo=1&_type=json`;
 
-  // Cloudflare Workers 프록시 URL (workers.js 배포 후 아래 URL 업데이트)
   const WORKERS_URL = CFG.workersUrl || '';
 
-  // 사용할 프록시 목록 (Workers URL이 설정된 경우 최우선)
-  const proxies = [
-    ...(WORKERS_URL ? [`${WORKERS_URL}?url=${encodeURIComponent(apiUrl)}`] : []),
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`,
-  ];
+  // Workers URL이 있으면 그것만 사용 (빠르고 안정적)
+  // 없으면 공개 프록시 시도 (불안정할 수 있음)
+  const proxies = WORKERS_URL
+    ? [`${WORKERS_URL}?url=${encodeURIComponent(apiUrl)}`]
+    : [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`,
+      ];
 
-  const tryFetch = async (url) => {
-    const r = await fetch(url, {signal: AbortSignal.timeout(8000)});
-    if(!r.ok) throw new Error(`HTTP ${r.status}`);
-    const text = await r.text();
-    // allorigins는 text, codetabs는 json 반환
-    let data;
-    try { data = JSON.parse(text); } catch { throw new Error('parse fail'); }
-    const items = data?.response?.body?.items?.item
-      ?? data?.body?.items?.item
-      ?? data?.items?.item
-      ?? null;
-    if(!items) throw new Error('no items');
-    const arr = Array.isArray(items) ? items : [items];
-    return arr.map(i => ({
-      name:  (i.aptNm||'').trim(),
-      price: parseInt((i.dealAmount||'0').replace(/,/g,''), 10)||0,
-      area:  parseFloat(i.excluUseAr||0)||0,
-      floor: String(i.floor||''),
-      year:  parseInt(i.dealYear||0, 10)||0,
-      month: parseInt(i.dealMonth||0, 10)||0,
-      day:   parseInt(i.dealDay||0, 10)||0,
-    })).filter(r => r.price > 0 && r.area > 0);
+  const tryFetch = async (url, timeoutMs) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const r = await fetch(url, {signal: ctrl.signal});
+      clearTimeout(timer);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const text = await r.text();
+      let data;
+      try { data = JSON.parse(text); } catch { throw new Error('parse fail'); }
+      const items = data?.response?.body?.items?.item
+        ?? data?.body?.items?.item
+        ?? data?.items?.item
+        ?? null;
+      if(!items) throw new Error('no items');
+      const arr = Array.isArray(items) ? items : [items];
+      return arr.map(i => ({
+        name:  (i.aptNm||'').trim(),
+        price: parseInt((i.dealAmount||'0').replace(/,/g,''),10)||0,
+        area:  parseFloat(i.excluUseAr||0)||0,
+        floor: String(i.floor||''),
+        year:  parseInt(i.dealYear||0,10)||0,
+        month: parseInt(i.dealMonth||0,10)||0,
+        day:   parseInt(i.dealDay||0,10)||0,
+      })).filter(r => r.price>0 && r.area>0);
+    } catch(e) {
+      clearTimeout(timer);
+      throw e;
+    }
   };
 
-  // 순차 시도 (첫 번째 성공 즉시 반환)
   return (async () => {
-    for(const proxy of proxies){
-      try{
-        const result = await tryFetch(proxy);
+    // Workers: 6초, 공개프록시: 3초씩 시도
+    const timeouts = WORKERS_URL ? [6000] : [3000, 4000];
+    for(let i=0; i<proxies.length; i++){
+      try {
+        const result = await tryFetch(proxies[i], timeouts[i]||3000);
         if(result.length > 0){
           console.log(`[AptScore] ✅ ${lawd}/${ym}: ${result.length}건`);
           return result;
         }
-      }catch(e){
-        console.warn(`[AptScore] ⚠️ ${lawd}/${ym}: ${proxy.slice(0,50)}… ${e.message}`);
+      } catch(e) {
+        console.warn(`[AptScore] ⚠️ ${lawd}/${ym} proxy[${i}]: ${e.message}`);
       }
     }
     return [];
@@ -4685,7 +4768,7 @@ async function analyze(apt){
   if(CFG.ok()){
     const mons=recentMonths(6);
     const pfx=apt.n.replace(/\s/g,'').slice(0,4);
-    setMsg('📡 실거래가 수집 중…');
+    setMsg('📡 실거래가 조회 중…');
     // 6개월 동시 병렬 요청 (순차 대비 6배 빠름)
     const results = await Promise.all(mons.map(ym => fetchMolit(lawd,ym)));
     results.forEach(d => {
@@ -6780,6 +6863,5 @@ function downloadBattleCard() {
 
 
 
+
 </script>
-</body>
-</html>
