@@ -867,11 +867,11 @@ body::after{
       <div class="ac" id="ac"></div>
       <div class="hs-quick">
         <span>인기</span>
-        <button onclick="pickByKey('래미안퍼스티지')">래미안퍼스티지</button>
+        <button onclick="pickByKey('올림픽파크포레온')">올림픽파크포레온</button>
         <button onclick="pickByKey('반포자이')">반포자이</button>
         <button onclick="pickByKey('헬리오시티')">헬리오시티</button>
-        <button onclick="pickByKey('잠실엘스')">잠실엘스</button>
-        <button onclick="pickByKey('마포래미안푸르지오')">마포래미안</button>
+        <button onclick="pickByKey('래미안퍼스티지')">래미안퍼스티지</button>
+        <button onclick="pickByKey('헬리오시티')">헬리오시티</button>
       </div>
 
       <!-- 배틀 CTA - 검색창 바로 아래 -->
@@ -909,17 +909,17 @@ body::after{
         <div class="hs-ranking">
           <div class="hs-ranking-title">주간 랭킹 TOP 3</div>
           <div class="hs-rank-list">
-            <div class="hs-rank-card gold" onclick="pickByKey('래미안퍼스티지')">
+            <div class="hs-rank-card gold" onclick="pickByKey('올림픽파크포레온')">
               <span class="rank-badge">🥇</span>
-              <div class="rank-info"><div class="rank-name">래미안퍼스티지</div><div class="rank-score">98<span>/100</span></div></div>
+              <div class="rank-info"><div class="rank-name">올림픽파크포레온</div><div class="rank-score">85<span>/100</span></div></div>
             </div>
-            <div class="hs-rank-card silver" onclick="pickByKey('반포자이')">
+            <div class="hs-rank-card silver" onclick="pickByKey('롯데캐슬이스트폴')">
               <span class="rank-badge">🥈</span>
-              <div class="rank-info"><div class="rank-name">반포자이</div><div class="rank-score">93<span>/100</span></div></div>
+              <div class="rank-info"><div class="rank-name">롯데캐슬이스트폴</div><div class="rank-score">85<span>/100</span></div></div>
             </div>
-            <div class="hs-rank-card bronze" onclick="pickByKey('헬리오시티')">
+            <div class="hs-rank-card bronze" onclick="pickByKey('신반포자이')">
               <span class="rank-badge">🥉</span>
-              <div class="rank-info"><div class="rank-name">헬리오시티</div><div class="rank-score">77<span>/100</span></div></div>
+              <div class="rank-info"><div class="rank-name">신반포자이</div><div class="rank-score">80<span>/100</span></div></div>
             </div>
           </div>
         </div>
@@ -932,12 +932,12 @@ body::after{
             <div class="hs-score-label">/ 100</div>
           </div>
         </div>
-        <div class="hs-apt-label">강남 퍼스트 아이파크</div>
+        <div class="hs-apt-label" id="hs-apt-label">올림픽파크포레온</div>
         <div class="hs-top-tags">
           <span class="hs-toptag-label">TOP 3 Tags</span>
-          <span class="hs-toptag">#학군최고</span>
+          <span class="hs-toptag">#신축대단지</span>
           <span class="hs-toptag">#역세권</span>
-          <span class="hs-toptag">#한강뷰</span>
+          <span class="hs-toptag">#한강근접</span>
         </div>
       </div>
       <div class="hs-right">
@@ -965,7 +965,7 @@ body::after{
         <div style="display:flex;justify-content:flex-end;">
           <div class="hs-score-badge-num" id="hs-side-score">0</div>
         </div>
-        <button class="hs-card-btn" onclick="pickByKey('래미안퍼스티지')">나만의 점수 카드 만들기 ↗</button>
+        <button class="hs-card-btn" onclick="pickByKey('올림픽파크포레온')">나만의 점수 카드 만들기 ↗</button>
         <button class="hs-filter-btn" onclick="scrollToFilter()">
           🔎 전국 <strong id="filter-btn-count">46,542</strong>개 아파트 필터 검색
         </button>
@@ -3601,6 +3601,7 @@ body.result-visible #regionSection{display:none!important}
 
 
 
+
 /* ══════════════════════════════════════════════════════════════
    AptScore v5 — DB 등록 아파트만 분석 / 임의 점수 없음
 ══════════════════════════════════════════════════════════════ */
@@ -3612,31 +3613,53 @@ const CFG={
 };
 
 const HUBS=[
-  // ── 서울 핵심 업무지구 ──
-  {n:'강남역',     la:37.4980,lo:127.0276,w:4, region:'서울'},
-  {n:'광화문',     la:37.5752,lo:126.9769,w:4, region:'서울'},
-  {n:'여의도',     la:37.5219,lo:126.9245,w:3, region:'서울'},
-  {n:'시청',       la:37.5666,lo:126.9779,w:3, region:'서울'},
-  {n:'종로',       la:37.5717,lo:126.9920,w:2, region:'서울'},
-  {n:'잠실',       la:37.5133,lo:127.1001,w:2, region:'서울'},
-  {n:'구로디지털', la:37.4853,lo:126.9012,w:2, region:'서울'},
-  {n:'마포홍대',   la:37.5572,lo:126.9253,w:2, region:'서울'},
-  // ── 경기/수도권 업무지구 ──
-  {n:'판교테크노', la:37.3943,lo:127.1112,w:3, region:'경기'},
-  {n:'분당정자',   la:37.3595,lo:127.1154,w:2, region:'경기'},
-  {n:'수원삼성',   la:37.2635,lo:127.0286,w:2, region:'경기'},
-  {n:'인천송도',   la:37.3830,lo:126.6565,w:2, region:'인천'},
-  // ── 부산 업무지구 ──
-  {n:'부산서면',   la:35.1579,lo:129.0597,w:3, region:'부산'},
-  {n:'해운대센텀', la:35.1693,lo:129.1299,w:3, region:'부산'},
-  {n:'부산남포동', la:35.0981,lo:129.0314,w:2, region:'부산'},
-  // ── 대구/광주/대전 업무지구 ──
-  {n:'대구동성로', la:35.8694,lo:128.5950,w:2, region:'대구'},
-  {n:'대구수성구', la:35.8571,lo:128.6309,w:2, region:'대구'},
-  {n:'광주충장로', la:35.1481,lo:126.9140,w:2, region:'광주'},
-  {n:'대전둔산',   la:36.3504,lo:127.3845,w:2, region:'대전'},
-  {n:'세종정부청사',la:36.4800,lo:127.2890,w:2, region:'세종'},
+  // ── 서울: 구별 핵심 업무지구 ──
+  {n:'강남역',      la:37.4980,lo:127.0276, region:'서울', gu:'강남구'},
+  {n:'삼성역',      la:37.5090,lo:127.0630, region:'서울', gu:'강남구'},
+  {n:'역삼역',      la:37.5001,lo:127.0361, region:'서울', gu:'강남구'},
+  {n:'서초역',      la:37.4836,lo:127.0126, region:'서울', gu:'서초구'},
+  {n:'반포역',      la:37.5040,lo:127.0054, region:'서울', gu:'서초구'},
+  {n:'광화문',      la:37.5752,lo:126.9769, region:'서울', gu:'종로구'},
+  {n:'시청',        la:37.5666,lo:126.9779, region:'서울', gu:'중구'},
+  {n:'을지로',      la:37.5660,lo:126.9900, region:'서울', gu:'중구'},
+  {n:'여의도',      la:37.5219,lo:126.9245, region:'서울', gu:'영등포구'},
+  {n:'영등포역',    la:37.5158,lo:126.9074, region:'서울', gu:'영등포구'},
+  {n:'잠실',        la:37.5133,lo:127.1001, region:'서울', gu:'송파구'},
+  {n:'종로3가',     la:37.5717,lo:126.9920, region:'서울', gu:'종로구'},
+  {n:'구로디지털',  la:37.4853,lo:126.9012, region:'서울', gu:'구로구'},
+  {n:'마포역',      la:37.5572,lo:126.9100, region:'서울', gu:'마포구'},
+  {n:'홍대입구',    la:37.5572,lo:126.9253, region:'서울', gu:'마포구'},
+  {n:'왕십리',      la:37.5610,lo:127.0381, region:'서울', gu:'성동구'},
+  {n:'용산역',      la:37.5300,lo:126.9645, region:'서울', gu:'용산구'},
+  {n:'노원역',      la:37.6556,lo:127.0561, region:'서울', gu:'노원구'},
+  {n:'강동역',      la:37.5301,lo:127.1236, region:'서울', gu:'강동구'},
+  {n:'신도림역',    la:37.5085,lo:126.8912, region:'서울', gu:'구로구'},
+  // ── 경기: 시별 업무지구 ──
+  {n:'판교테크노',  la:37.3943,lo:127.1112, region:'경기', gu:'성남시'},
+  {n:'분당정자',    la:37.3595,lo:127.1154, region:'경기', gu:'성남시'},
+  {n:'수원역',      la:37.2657,lo:127.0007, region:'경기', gu:'수원시'},
+  {n:'수원삼성',    la:37.2635,lo:127.0286, region:'경기', gu:'수원시'},
+  {n:'동탄역',      la:37.2108,lo:127.0780, region:'경기', gu:'화성시'},
+  {n:'기흥역',      la:37.2753,lo:127.1154, region:'경기', gu:'용인시'},
+  {n:'고양일산',    la:37.6765,lo:126.7770, region:'경기', gu:'고양시'},
+  {n:'인천송도',    la:37.3830,lo:126.6565, region:'인천', gu:'연수구'},
+  {n:'인천시청',    la:37.4563,lo:126.7052, region:'인천', gu:'남동구'},
+  {n:'김포공항',    la:37.5583,lo:126.7941, region:'경기', gu:'김포시'},
+  {n:'풍무역',      la:37.6023,lo:126.7478, region:'경기', gu:'김포시'},
+  // ── 부산 ──
+  {n:'부산서면',    la:35.1579,lo:129.0597, region:'부산', gu:'부산진구'},
+  {n:'해운대센텀',  la:35.1693,lo:129.1299, region:'부산', gu:'해운대구'},
+  {n:'부산역',      la:35.1151,lo:129.0421, region:'부산', gu:'동구'},
+  {n:'남포동',      la:35.0981,lo:129.0314, region:'부산', gu:'중구'},
+  // ── 대구 ──
+  {n:'동성로',      la:35.8694,lo:128.5950, region:'대구', gu:'중구'},
+  {n:'수성구청',    la:35.8571,lo:128.6309, region:'대구', gu:'수성구'},
+  // ── 광주/대전/세종 ──
+  {n:'충장로',      la:35.1481,lo:126.9140, region:'광주', gu:'동구'},
+  {n:'대전둔산',    la:36.3504,lo:127.3845, region:'대전', gu:'서구'},
+  {n:'세종청사',    la:36.4800,lo:127.2890, region:'세종', gu:'세종시'},
 ];
+
 
 /* ══════════════════════════════════════════════════════════════
    전국 아파트 DB
@@ -3964,55 +3987,49 @@ const PRICE_MAP={
 };
 
 function scoreHubs(la, lo, apt){
-  // ── 핵심시설 접근성: 동/구 범위 내 업무지구만 평가 ──
-  // 1단계: 같은 city(시/도) 내 업무지구
-  // 2단계: 없으면 전체에서 가장 가까운 것 (최대 반경 15km)
-  // → 서울 아파트는 서울 업무지구끼리만 비교, 부산은 부산끼리
-
+  // ── 핵심시설 접근성: 같은 구/군 내 업무지구 우선 ──
   const aptCity = (apt && apt.city) || '';
   const aptGu   = (apt && apt.gu)   || '';
 
-  // 같은 region의 허브만 추출
-  let regionHubs = HUBS.filter(h => h.region === aptCity);
-  if(regionHubs.length === 0) regionHubs = HUBS; // fallback
+  // 1단계: 같은 city + 같은 gu 내 허브
+  let regionHubs = HUBS.filter(h => h.region === aptCity && h.gu === aptGu);
+  // 2단계: 같은 city 내 (gu 제한 없이)
+  if(regionHubs.length === 0) regionHubs = HUBS.filter(h => h.region === aptCity);
+  // 3단계: 전체 fallback
+  if(regionHubs.length === 0) regionHubs = HUBS;
 
   const facs = {};
-  for(const h of regionHubs){
-    facs[h.n] = hav(la, lo, h.la, h.lo);
-  }
+  for(const h of regionHubs) facs[h.n] = hav(la, lo, h.la, h.lo);
 
-  const sorted = Object.entries(facs).sort((a,b)=>a[1]-b[1]);
+  const sorted = Object.entries(facs).sort((a,b) => a[1]-b[1]);
   const nearest = sorted[0];
   const dist = nearest?.[1] || 99999;
 
-  // ── 거리 → 점수 (구/동 내 업무지구 기준) ──
-  // 500m 이내: 100 / 1km: 90 / 2km: 78 / 3km: 65 / 5km: 50 / 8km: 35 / 12km: 20 / 15km+: 5
+  // 거리 → 점수
   let score;
   if      (dist <= 500)   score = 100;
-  else if (dist <= 1000)  score = 100 - (dist-500)/500*10;    // 100→90
-  else if (dist <= 2000)  score = 90  - (dist-1000)/1000*12;  // 90→78
-  else if (dist <= 3000)  score = 78  - (dist-2000)/1000*13;  // 78→65
-  else if (dist <= 5000)  score = 65  - (dist-3000)/2000*15;  // 65→50
-  else if (dist <= 8000)  score = 50  - (dist-5000)/3000*15;  // 50→35
-  else if (dist <= 12000) score = 35  - (dist-8000)/4000*15;  // 35→20
-  else if (dist <= 15000) score = 20  - (dist-12000)/3000*15; // 20→5
-  else                    score = 5;
+  else if (dist <= 1000)  score = 100 - (dist-500)/500*10;
+  else if (dist <= 2000)  score = 90  - (dist-1000)/1000*12;
+  else if (dist <= 3000)  score = 78  - (dist-2000)/1000*13;
+  else if (dist <= 5000)  score = 65  - (dist-3000)/2000*15;
+  else if (dist <= 8000)  score = 50  - (dist-5000)/3000*15;
+  else if (dist <= 12000) score = 35  - (dist-8000)/4000*15;
+  else                    score = Math.max(5, 20 - (dist-12000)/3000*5);
 
-  // 2위 업무지구 보너스 (같은 지역 내)
   const d2 = sorted[1]?.[1] || 99999;
-  const bonus = d2 <= 3000 ? 5 : d2 <= 6000 ? 3 : d2 <= 10000 ? 1 : 0;
-
+  const bonus = d2 <= 3000 ? 5 : d2 <= 6000 ? 3 : 1;
   const finalScore = Math.round(Math.max(0, Math.min(100, score + bonus)) * 10) / 10;
 
-  // 결과에 지역 표시
-  const regionLabel = aptCity ? `${aptCity} 내 업무지구` : '인근 업무지구';
+  const scopeLabel = regionHubs[0]?.gu === aptGu
+    ? `${aptGu} 내 업무지구`
+    : `${aptCity} 내 업무지구`;
 
   return{s: finalScore, d:{
-    '기준': regionLabel,
-    '가장가까운': nearest?.[0] || '-',
-    '거리': fd(dist),
-    '2위업무지구': sorted[1]?.[0] || '-',
-    '2위거리': fd(d2),
+    '기준범위':     scopeLabel,
+    '가장가까운':   nearest?.[0] || '-',
+    '거리':         fd(dist),
+    '2위업무지구':  sorted[1]?.[0] || '-',
+    '2위거리':      fd(d2),
   }, facs};
 }
 
@@ -4127,58 +4144,47 @@ function scorePrice(recs){
 }
 
 function scorePriceLevel(apt, recs){
-  // ── ㎡당 가격 수준 점수 (구매자 관점) ──
-  // 해당 구(gu) PRICE_MAP 평균 대비 이 단지가 얼마나 저렴한지 평가
-  // 
-  // 점수 기준 (구 평균 대비):
-  //   -40% 이하 (매우 저렴) → 100점
-  //   -20%                  → 83점
-  //    평균                 → 50점
-  //   +20% (비쌈)           → 17점
-  //   +40% 이상             →  0점
-  //
-  // 실거래 데이터 있으면 실제 ㎡당 평균 사용,
-  // 없으면 구 PRICE_MAP 기준 50점(중립)
-
-  const guBase = PRICE_MAP[apt.gu] || 2500; // 구 기준 ㎡당 평균 (만원)
+  // ── ㎡당 가격수준: 구/군 평균 대비 % 비교 (구매자 관점) ──
+  const guBase = PRICE_MAP[apt.gu] || 2500;
 
   if(recs.length){
     const vals = recs.filter(r => r.area > 0).map(r => r.price / r.area);
     if(vals.length){
-      const actualAvg = vals.reduce((a,b) => a+b) / vals.length;
-      const avgTotal  = recs.reduce((a,r) => a+r.price, 0) / recs.length;
-
-      // 구 평균 대비 비율 (1.0 = 평균, 0.8 = 20% 저렴, 1.2 = 20% 비쌈)
+      const actualAvg = Math.round(vals.reduce((a,b) => a+b) / vals.length);
+      const avgTotal  = Math.round(recs.reduce((a,r) => a+r.price, 0) / recs.length);
       const ratio = actualAvg / guBase;
-      // 점수 공식: ratio 0.6→100점, 1.0→50점, 1.4→0점 (선형)
+      const diffPct = Math.round((ratio - 1) * 100);
+
+      // 점수: ratio 0.6→100점, 1.0→50점, 1.4→0점 (선형)
       const score = Math.round(Math.max(0, Math.min(100,
         (1.4 - ratio) / 0.8 * 100
       )) * 10) / 10;
 
-      const diffPct = Math.round((ratio - 1) * 100);
-      const diffLabel = diffPct > 0
-        ? `구 평균 대비 +${diffPct}% (고가)`
+      const sign = diffPct > 0 ? '+' : '';
+      const priceLabel = diffPct > 0
+        ? `${apt.gu} 평균 대비 ${sign}${diffPct}% (고가)`
         : diffPct < 0
-        ? `구 평균 대비 ${diffPct}% (저렴)`
-        : '구 평균 수준';
-      const grade = score >= 70 ? '가성비 우수 (저평가 가능)' :
-                    score >= 50 ? '지역 평균 수준' :
-                    score >= 30 ? '지역 대비 고가' : '고가 단지 (프리미엄)';
+        ? `${apt.gu} 평균 대비 ${sign}${diffPct}% (저렴)`
+        : `${apt.gu} 평균 수준`;
+      const grade = score >= 75 ? '가성비 우수 ✅' :
+                    score >= 55 ? '지역 평균 수준' :
+                    score >= 35 ? '지역 대비 고가' : '고가 프리미엄 단지';
 
       return{s: score, d:{
-        '단지㎡당평균':  Math.round(actualAvg).toLocaleString() + '만원',
-        '구(gu)기준평균': guBase.toLocaleString() + '만원',
-        '가격평가':       diffLabel,
-        '평균거래가':     fp(Math.round(avgTotal)),
-        '종합':           grade,
+        [`${apt.gu} 기준 ㎡평균`]: guBase.toLocaleString() + '만원',
+        '이 단지 ㎡평균':  actualAvg.toLocaleString() + '만원',
+        '지역 대비':       priceLabel,
+        '평균 거래가':     fp(avgTotal),
+        '종합':            grade,
       }};
     }
   }
 
-  // 실거래 없음 → 중립 50점
   return{s: 50, d:{
-    '구기준㎡단가': guBase.toLocaleString() + '만원 (추정)',
-    '안내': 'MOLIT API 연동 시 실거래 기반 가격 반영됩니다',
+    [`${apt.gu} 기준 ㎡평균`]: guBase.toLocaleString() + '만원 (추정)',
+    '이 단지 ㎡평균':  '실거래 데이터 없음',
+    '지역 대비':       `${apt.gu} 평균 기준 50점 (중립)`,
+    '안내':            'MOLIT API 키 입력 시 실거래 기반 반영',
   }};
 }
 
@@ -6032,8 +6038,8 @@ function initHero() {
   drawHeroRadar();
   // 데모 숫자 카운트업
   setTimeout(()=>{
-    countUp(document.getElementById('hs-demo-score'), 96, 1500);
-    countUp(document.getElementById('hs-side-score'), 96, 1500);
+    countUp(document.getElementById('hs-demo-score'), 85, 1500);
+    countUp(document.getElementById('hs-side-score'), 85, 1500);
   }, 400);
 }
 
@@ -6094,6 +6100,7 @@ function resetBattle() {
   // 인풋 포커스
   if(ia) ia.focus();
 }
+
 
 
 
