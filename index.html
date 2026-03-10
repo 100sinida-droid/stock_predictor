@@ -6919,12 +6919,90 @@ function downloadBattleCard() {
   ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='12px sans-serif'; ctx.textAlign='center';
   ctx.fillText('stock-predictor-dx2.pages.dev', W/2, H-12);
 
-  // 다운로드
-  const a = document.createElement('a');
-  a.href = cv.toDataURL('image/png');
-  a.download = `배틀_${rA.name}_vs_${rB.name}.png`;
-  a.click();
-  toast('📸 배틀 이미지 저장됨!','ok');
+  // 이미지를 팝업으로 표시
+  const imgUrl = cv.toDataURL('image/png');
+  
+  // 모달 생성
+  const modal = document.createElement('div');
+  modal.id = 'battle-result-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  `;
+  
+  const img = document.createElement('img');
+  img.src = imgUrl;
+  img.style.cssText = `
+    max-width: 95%;
+    max-height: 75vh;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  `;
+  
+  const btnContainer = document.createElement('div');
+  btnContainer.style.cssText = 'display: flex; gap: 12px;';
+  
+  const downloadBtn = document.createElement('button');
+  downloadBtn.textContent = '📥 이미지 저장';
+  downloadBtn.style.cssText = `
+    padding: 12px 24px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+  `;
+  downloadBtn.onclick = () => {
+    const a = document.createElement('a');
+    a.href = imgUrl;
+    a.download = `배틀_${rA.name}_vs_${rB.name}.png`;
+    a.click();
+    toast('📸 이미지 저장됨!','ok');
+  };
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕ 닫기';
+  closeBtn.style.cssText = `
+    padding: 12px 24px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+  `;
+  closeBtn.onclick = () => {
+    document.body.removeChild(modal);
+  };
+  
+  btnContainer.appendChild(downloadBtn);
+  btnContainer.appendChild(closeBtn);
+  
+  modal.appendChild(img);
+  modal.appendChild(btnContainer);
+  
+  // 배경 클릭 시 닫기
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  };
+  
+  document.body.appendChild(modal);
+  toast('⚔️ 배틀 결과 생성 완료!','ok');
 }
 
 
