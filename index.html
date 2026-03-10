@@ -4217,13 +4217,47 @@ const REGION=buildRegionIndex();
    점수 데이터
 ══════════════════════════════════════════ */
 const SCORE_META={
-  '실거래가시세변동':{icon:'💹',w:20,lbl:'시세변동'},
+  '지역선호도':      {icon:'📍',w:20,lbl:'지역선호도'},
   '핵심시설접근성':  {icon:'🏙️',w:20,lbl:'핵심시설'},
   '지하철버스교통':  {icon:'🚇',w:15,lbl:'교통'},
   '학군':            {icon:'🏫',w:15,lbl:'학군'},
   '편의시설':        {icon:'🏪',w:10,lbl:'편의시설'},
   '건물신축도':      {icon:'🏗️',w:10,lbl:'신축도'},
   '㎡당가격수준':    {icon:'💰',w:10,lbl:'가격수준'},
+};
+
+// 지역 선호도 데이터베이스
+const LOCATION_PREFERENCE = {
+  '강남구':100,'서초구':100,'송파구':95,'강동구':85,
+  '양천구':88,'강서구':82,'구로구':75,'영등포구':80,'금천구':72,
+  '종로구':92,'중구':88,'용산구':94,
+  '성동구':86,'광진구':84,'동대문구':76,'중랑구':70,
+  '성북구':78,'강북구':68,'도봉구':72,'노원구':74,
+  '은평구':76,'서대문구':82,'마포구':90,
+  '관악구':74,'동작구':80,
+  '성남시':85,'분당구':92,'수정구':75,'중원구':78,
+  '과천시':95,'광명시':82,'하남시':84,
+  '고양시':80,'일산동구':86,'일산서구':86,'덕양구':76,
+  '용인시':82,'수지구':88,'기흥구':85,'처인구':72,
+  '부천시':78,'안양시':80,'동안구':83,'만안구':77,
+  '의왕시':76,'군포시':78,'안산시':72,'시흥시':74,
+  '화성시':75,'수원시':80,'팔달구':78,'영통구':83,
+  '권선구':76,'장안구':77,'남양주시':74,'구리시':78,
+  '의정부시':72,'파주시':70,'김포시':76,
+  '연수구':82,'남동구':78,'부평구':76,'계양구':74,
+  '인천서구':72,'인천중구':70,'인천동구':68,'미추홀구':75,
+  '유성구':80,'대전서구':76,'대전중구':72,'대전동구':70,'대덕구':74,
+  '수성구':85,'달서구':78,'대구중구':74,'대구동구':72,
+  '대구서구':76,'대구남구':75,'대구북구':73,
+  '해운대구':88,'수영구':86,'부산남구':82,'부산진구':80,
+  '동래구':78,'연제구':79,'금정구':74,'부산서구':72,
+  '부산중구':75,'부산동구':70,'영도구':68,'부산북구':72,
+  '사상구':73,'사하구':71,'부산강서구':76,
+  '광주서구':76,'광주남구':74,'광주동구':70,'광주북구':72,'광산구':73,
+  '울산남구':78,'울산중구':75,'울산동구':74,'울산북구':76,'울주군':72,
+  '세종시':82,
+  '판교':92,'동탄':82,'광교':85,'위례':88,'송도':88,
+  '평촌':85,'목동':88,'잠실':92,'여의도':95,'압구정':98
 };
 const GRADE={S:'#059669',A:'#2563eb',B:'#d97706',C:'#ea580c',D:'#dc2626'};
 const GRADE_NM={S:'최우수',A:'우수',B:'양호',C:'보통',D:'미흡'};
@@ -4539,15 +4573,77 @@ function scoreBuilding(apt,recs){
   }};
 }
 
-function scorePrice(recs){
-  const h=Math.max(1,Math.floor(recs.length/2));
-  const avg=a=>{const v=a.filter(r=>r.area>0).map(r=>r.price/r.area);return v.length?v.reduce((a,b)=>a+b)/v.length:0;};
-  const[c,p]=[avg(recs.slice(0,h)),avg(recs.slice(h))];
-  if(!p||!c) return{s:55,chg:0,d:{'안내':'MOLIT API 키 입력 시 실데이터 표시','기준':'55점 (보합 기준)'}};
-  const chg=(c-p)/p*100;
-  return{s:Math.round(Math.max(0,Math.min(100,(chg+5)/15*100))*10)/10,chg,d:{
-    '현재㎡단가':Math.round(c).toLocaleString()+'만','이전㎡단가':Math.round(p).toLocaleString()+'만',
-    '변동률':(chg>0?'+':'')+chg.toFixed(1)+'%','거래건수':recs.slice(0,h).length+'건',
+function scoreLocationPreference(apt){
+  // 지역 선호도 점수 계산
+  const addr = apt.a || '';
+  const gu = apt.gu || '';
+  const dong = apt.dong || '';
+  
+  // 1. 상세 지역 매칭 (동 > 구 > 시)
+  for (let region in LOCATION_PREFERENCE) {
+    if (dong && dong.includes(region)) {
+      const score = LOCATION_PREFERENCE[region];
+      const grade = score >= 90 ? 'S급' : score >= 80 ? 'A급' : score >= 70 ? 'B급' : 'C급';
+      return {s:score, d:{
+        '주소': addr || '정보없음',
+        '지역구분': dong,
+        '선호도등급': grade,
+        '특성': score >= 95 ? '최상급 프리미엄 입지' : score >= 85 ? '선호도 높은 우수지역' : score >= 75 ? '안정적 선호지역' : '일반지역'
+      }};
+    }
+  }
+  
+  for (let region in LOCATION_PREFERENCE) {
+    if (gu && gu.includes(region)) {
+      const score = LOCATION_PREFERENCE[region];
+      const grade = score >= 90 ? 'S급' : score >= 80 ? 'A급' : score >= 70 ? 'B급' : 'C급';
+      return {s:score, d:{
+        '주소': addr || '정보없음',
+        '지역구분': gu,
+        '선호도등급': grade,
+        '특성': score >= 95 ? '최상급 프리미엄 입지' : score >= 85 ? '선호도 높은 우수지역' : score >= 75 ? '안정적 선호지역' : '일반지역'
+      }};
+    }
+  }
+  
+  // 2. 서울 기본 점수
+  if (addr.includes('서울') || gu.includes('서울')) {
+    return {s:80, d:{
+      '주소': addr || '정보없음',
+      '지역구분': '서울 (세부지역 미분류)',
+      '선호도등급': 'B+급',
+      '특성': '수도권 중심지'
+    }};
+  }
+  
+  // 3. 경기도/광역시 기본 점수
+  if (addr.includes('경기') || gu.includes('경기')) {
+    return {s:75, d:{
+      '주소': addr || '정보없음',
+      '지역구분': '경기도',
+      '선호도등급': 'B급',
+      '특성': '수도권'
+    }};
+  }
+  
+  const metros = ['인천','대전','대구','부산','광주','울산'];
+  for (let metro of metros) {
+    if (addr.includes(metro) || gu.includes(metro)) {
+      return {s:75, d:{
+        '주소': addr || '정보없음',
+        '지역구분': metro + '광역시',
+        '선호도등급': 'B급',
+        '특성': '광역시 중심'
+      }};
+    }
+  }
+  
+  // 4. 기타 지역 기본값
+  return {s:70, d:{
+    '주소': addr || '정보없음',
+    '지역구분': '기타지역',
+    '선호도등급': 'C급',
+    '특성': '일반지역'
   }};
 }
 
@@ -4692,7 +4788,7 @@ let lastRecs=[], currentApt=null;
 async function analyze(apt, mode){
   currentApt=apt;
   setMsg(`✅ DB 매칭: ${apt.n}`);
-  await sleep(200);
+  await sleep(100);
 
   // 실거래 수집
   const lawd=LAWD[apt.gu]||'11680', recs=[];
@@ -4717,18 +4813,18 @@ async function analyze(apt, mode){
   setMsg('🏫 학군 분석…');           const p4=scoreSchool(apt);
   setMsg('🏪 편의시설 분석…');       const p5=scoreAmenity(apt.la,apt.lo,apt);
   setMsg('🏗️ 건물 신축도 분석…');    const p6=scoreBuilding(apt,recs);
-  setMsg('💹 시세 변동 분석…');      const p1=scorePrice(recs);
+  setMsg('📍 지역 선호도 분석…');    const p1=scoreLocationPreference(apt);
   setMsg('💰 가격 수준 분석…');      const p7=scorePriceLevel(apt,recs);
 
-  const scores={'실거래가시세변동':p1.s,'핵심시설접근성':p2.s,'지하철버스교통':p3.s,
+  const scores={'지역선호도':p1.s,'핵심시설접근성':p2.s,'지하철버스교통':p3.s,
     '학군':p4.s,'편의시설':p5.s,'건물신축도':p6.s,'㎡당가격수준':p7.s};
   const total=Math.round(Object.keys(scores).reduce((s,k)=>s+scores[k]*SCORE_META[k].w/100,0)*10)/10;
   const grade=total>=80?'S':total>=70?'A':total>=60?'B':total>=50?'C':'D';
 
   return{name:apt.n,addr:apt.a,recs,scores,total,grade,
-    details:{'실거래가시세변동':p1.d,'핵심시설접근성':p2.d,'지하철버스교통':p3.d,
+    details:{'지역선호도':p1.d,'핵심시설접근성':p2.d,'지하철버스교통':p3.d,
       '학군':p4.d,'편의시설':p5.d,'건물신축도':p6.d,'㎡당가격수준':p7.d},
-    facs:p2.facs,chg:p1.chg||0};
+    facs:p2.facs,chg:0};
 }
 
 /* ══════════════════════════════════════════
