@@ -3927,76 +3927,7 @@ H4sIAKJcrmkC/5S9W49dx5Em+u5fUU8zJaB4sPKycuV6pNQ6ttry2LD6gp63AY6AMzieGaAbPedtQFFF
     <div style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.3);text-align:center;">인스타그램 스토리 / 단톡방 공유에 최적화된 카드입니다</div>
   </div>
 </div>
-
 <script defer>
-
-
-
-
-
-
-function saveWorkers() {
-  const url = document.getElementById('workers-url-in')?.value?.trim();
-  if(!url){ toast('Workers URL을 입력하세요','ng'); return; }
-  if(!url.startsWith('https://')){ toast('https:// 로 시작해야 합니다','ng'); return; }
-  CFG.setWorkers(url);
-  toast('✅ Workers URL 저장됨 — 다음 검색부터 적용됩니다','ok');
-  updateDot();
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ══════════════════════════════════════════════════════════════
-   AptScore v5 — DB 등록 아파트만 분석 / 임의 점수 없음
-══════════════════════════════════════════════════════════════ */
-
-const CFG={
-  // 국토교통부 아파트 매매 실거래가 API 키 (기본 내장)
-  _DEFAULT_KEY:'fad551728c95a236e14821d54bccaada546838a751e426dc9df4a3e813bb51e9<script defer>
 
 
 
@@ -6865,3 +6796,4 @@ function downloadBattleCard() {
 
 
 </script>
+</html>
