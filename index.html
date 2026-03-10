@@ -3599,12 +3599,41 @@ body.result-visible #regionSection{display:none!important}
 
 
 #r-addr{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:keep-all;}
+
+/* ── battle-modal / score-card-modal 오버레이 ── */
+#battle-modal,
+#score-card-modal {
+  display: none;
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,.75) !important;
+  z-index: 5000 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  overflow-y: auto !important;
+}
+#battle-modal[style*="flex"],
+#score-card-modal[style*="flex"] {
+  display: flex !important;
+}
+#battle-modal .modal-box,
+#score-card-modal .modal-box {
+  position: relative !important;
+  z-index: 5001 !important;
+  width: 100% !important;
+  margin: auto !important;
+}
+
 </style>
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d453822cb7cb33406a188d8890eb0bf3&libraries=services"></script>
 </head>
 <body>
 
 <script defer>
+
+
+
 
 
 
@@ -4258,27 +4287,27 @@ function recentMonths(n){
   return r;
 }
 async function fetchMolit(lawd,ym){
-  // 공공데이터포털 JSONP 방식 - CORS 프록시 없이 직접 호출
   if(!CFG.ok()) return Promise.resolve([]);
   const key = CFG.molit;
 
   return new Promise((resolve) => {
-    const cbName = `_aptCb_${lawd}_${ym}_${Date.now()}`;
+    const cbName = `_aptCb${lawd}${ym}`;   // 단순한 이름
     const script = document.createElement('script');
     let settled = false;
 
-    // 타임아웃 4초
+    // 타임아웃 12초 (공공데이터 API 응답 느릴 때 대비)
     const timer = setTimeout(() => {
       if(settled) return;
       settled = true;
       cleanup();
+      console.warn(`[AptScore] JSONP 타임아웃: LAWD=${lawd} YM=${ym}`);
       resolve([]);
-    }, 4000);
+    }, 12000);
 
     function cleanup(){
       clearTimeout(timer);
       delete window[cbName];
-      if(script.parentNode) script.parentNode.removeChild(script);
+      try{ if(script.parentNode) script.parentNode.removeChild(script); }catch(e){}
     }
 
     window[cbName] = function(data){
@@ -4286,10 +4315,24 @@ async function fetchMolit(lawd,ym){
       settled = true;
       cleanup();
       try{
-        const items = data?.response?.body?.items?.item;
-        if(!items) return resolve([]);
-        console.log('[AptScore JSONP] 응답 items:', items ? (Array.isArray(items)?items.length:1) : 0, '건');
+        // 응답 구조 다중 파싱 시도
+        let items = null;
+        if(data?.response?.body?.items?.item) {
+          items = data.response.body.items.item;
+        } else if(data?.body?.items?.item) {
+          items = data.body.items.item;
+        } else if(Array.isArray(data?.response?.body?.items)) {
+          items = data.response.body.items;
+        } else if(data?.items?.item) {
+          items = data.items.item;
+        }
+
+        if(!items){ 
+          console.warn(`[AptScore] JSONP 데이터 없음: LAWD=${lawd} YM=${ym}`, data);
+          return resolve([]);
+        }
         const arr = Array.isArray(items) ? items : [items];
+        console.log(`[AptScore] JSONP 수신: LAWD=${lawd} YM=${ym} → ${arr.length}건`);
         resolve(arr.map(i => ({
           name:  (i.aptNm||'').trim(),
           price: parseInt((i.dealAmount||'0').replace(/,/g,''), 10)||0,
@@ -4299,17 +4342,27 @@ async function fetchMolit(lawd,ym){
           month: parseInt(i.dealMonth||0, 10)||0,
           day:   parseInt(i.dealDay||0, 10)||0,
         })).filter(r => r.price > 0 && r.area > 0));
-      }catch(e){
+      } catch(e){
+        console.error('[AptScore] JSONP 파싱 오류:', e);
         resolve([]);
       }
     };
 
-    script.src = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade`
+    const url = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade`
       + `?serviceKey=${key}`
       + `&LAWD_CD=${lawd}&DEAL_YMD=${ym}`
       + `&numOfRows=1000&pageNo=1&_type=json&_callback=${cbName}`;
-    script.onerror = () => { if(!settled){ settled=true; cleanup(); resolve([]); } };
+    
+    script.src = url;
+    script.onerror = (e) => {
+      if(settled) return;
+      settled = true;
+      cleanup();
+      console.error(`[AptScore] JSONP script 로드 실패: ${url.slice(0,100)}`);
+      resolve([]);
+    };
     document.head.appendChild(script);
+    console.log(`[AptScore] JSONP 요청: LAWD=${lawd} YM=${ym}`);
   });
 }
 
@@ -4929,6 +4982,7 @@ const PERSONA_PRESETS = {
   투자자: {시세변동:2.0, 핵심시설:1.2, 교통:1.3, 학군:0.8, 편의시설:0.8, 신축도:0.6, 가격:1.5},
 };
 let _personaWeights = null; // null = 기본값
+const _scoreCache = new Map();
 let _lastR = null; // 마지막 분석 결과 저장
 
 function applyPersona(name) {
@@ -5078,6 +5132,7 @@ function openBattle() {
   const res=document.getElementById('battle-result');
   if(res) res.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);font-size:14px;padding:20px 0;">두 단지를 선택하면 비교 결과가 표시됩니다</div>';
   modal.style.display='flex';
+  document.body.style.overflow='hidden';
   // 배틀 AC 이벤트 등록
   setupBattleAC('A');
   setupBattleAC('B');
@@ -5313,6 +5368,7 @@ async function castVote(aptName, item, type) {
 // ════════════════════════════════════════════════════
 // afterRender: render() 완료 후 바이럴 기능 업데이트
 function afterRender(R) {
+  _scoreCache.set(R.name,{total:R.total,grade:R.grade});
   _lastR = R;
   if(_personaWeights) recalcWithPersona(R); else renderPersonaScore(R.total, R.grade);
   renderVoteSection(R.name);
@@ -5529,7 +5585,7 @@ function applyFilters() {
   // 등급 필터 (다중 선택)
   if (typeof _gradeFilter !== 'undefined' && _gradeFilter) {
     const gf = _gradeFilter instanceof Set ? _gradeFilter : new Set([_gradeFilter]);
-    if (gf.size > 0) pool = pool.filter(a => gf.has((_scoreCache.get(a.n)?.grade || estimateGrade(a))));
+    if (gf.size > 0) pool = pool.filter(a => gf.has(((typeof _scoreCache!=='undefined'?_scoreCache.get(a.n):null)?.grade || estimateGrade(a))));
   }
 
   // 정렬
@@ -5578,7 +5634,7 @@ function renderAptCards(reset) {
   const html = slice
     .filter(a => /[가-힣]/.test(a.n || ''))  // 한글 없는 이름 제외
     .map(a => {
-    const grade = (_scoreCache.get(a.n)?.grade || estimateGrade(a));
+    const grade = ((typeof _scoreCache!=='undefined'?_scoreCache.get(a.n):null)?.grade || estimateGrade(a));
     const tags = [];
     if(a.yr) tags.push(`<span class="apt-card-tag yr">${a.yr}년</span>`);
     if(a.st&&a.sd<1500) tags.push(`<span class="apt-card-tag transit">${a.st} ${a.sd}m</span>`);
@@ -6203,6 +6259,9 @@ function resetBattle() {
   // 인풋 포커스
   if(ia) ia.focus();
 }
+
+
+
 
 
 
