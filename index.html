@@ -1,4 +1,14 @@
-<!DOCTYPE html>
+<!DOCTYP
+<div style="margin-top:12px;">
+  <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px;">🔧 Workers 프록시 URL (실거래 연동용)</div>
+  <div style="display:flex;gap:8px;">
+    <input id="workers-url-in" type="text"
+      placeholder="https://apt-proxy.your-name.workers.dev"
+      style="flex:1;padding:8px 12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:#fff;font-size:12px;outline:none;">
+    <button onclick="saveWorkers()"
+      style="padding:8px 14px;background:rgba(99,102,241,.3);border:1px solid rgba(99,102,241,.5);color:#a5b4fc;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;">저장</button>
+  </div>
+</div>E html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -3625,12 +3635,219 @@ body.result-visible #regionSection{display:none!important}
   margin: auto !important;
 }
 
+
+/* ── 배틀 모달 레이아웃 ── */
+.battle-input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.battle-input-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.battle-input-wrap input:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 2px rgba(201,168,76,.2);
+}
+.battle-ac-list {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: #1a2035;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  z-index: 200;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 4px;
+}
+.battle-ac-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  color: rgba(255,255,255,.8);
+}
+.battle-ac-item:hover { background: rgba(201,168,76,.12); color: #fff; }
+@media(max-width: 640px) {
+  .battle-input-row { grid-template-columns: 1fr !important; }
+}
+
+
+/* ══ 배틀 모달 ══ */
+.bm-box { max-width:900px; padding:0 !important; overflow:hidden; }
+.bm-hd {
+  padding:20px 24px;
+  background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(139,92,246,.1));
+  border-bottom:1px solid rgba(255,255,255,.08);
+  margin-bottom:0 !important;
+}
+.bm-reset-btn {
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.6); padding:6px 14px; border-radius:8px;
+  font-size:12px; cursor:pointer; transition:.2s;
+}
+.bm-reset-btn:hover { background:rgba(255,255,255,.12); color:#fff; }
+
+/* 아레나 (좌우 + VS) */
+.bm-arena {
+  display:grid;
+  grid-template-columns:1fr 56px 1fr;
+  gap:0;
+  padding:20px 24px;
+  align-items:start;
+}
+.bm-side { display:flex; flex-direction:column; gap:12px; }
+.bm-side-label {
+  font-size:11px; font-weight:700; letter-spacing:.08em;
+  text-transform:uppercase; padding:4px 10px; border-radius:20px;
+  display:inline-block; width:fit-content;
+}
+.bm-label-a { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); }
+.bm-label-b { background:rgba(59,130,246,.15); color:#60a5fa; border:1px solid rgba(59,130,246,.3); }
+
+/* 검색 */
+.bm-search-wrap { display:flex; flex-direction:column; gap:8px; }
+.bm-input {
+  width:100%; padding:10px 14px;
+  background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1);
+  border-radius:10px; color:#fff; font-size:14px; outline:none;
+  transition:.2s; box-sizing:border-box;
+}
+.bm-input:focus { border-color:rgba(201,168,76,.6); box-shadow:0 0 0 3px rgba(201,168,76,.1); }
+.bm-analyze-btn {
+  padding:10px; background:linear-gradient(135deg,var(--gold),#a8722a);
+  color:#000; border:none; border-radius:10px; font-size:13px;
+  font-weight:800; cursor:pointer; transition:.2s; letter-spacing:.03em;
+}
+.bm-analyze-btn:hover { opacity:.88; transform:translateY(-1px); }
+.bm-analyze-btn:active { transform:translateY(0); }
+.bm-ac-list {
+  position:absolute; top:calc(100% + 4px); left:0; right:0;
+  background:#1a2035; border:1px solid rgba(255,255,255,.12);
+  border-radius:10px; z-index:300; max-height:180px; overflow-y:auto;
+  display:none; box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.bm-ac-item {
+  padding:9px 14px; cursor:pointer; font-size:13px;
+  border-bottom:1px solid rgba(255,255,255,.05); color:rgba(255,255,255,.8);
+  transition:.15s;
+}
+.bm-ac-item:hover,.bm-ac-item.focused { background:rgba(201,168,76,.12); color:#fff; }
+.bm-ac-item:last-child { border-bottom:none; }
+
+/* VS 컬럼 */
+.bm-vs-col {
+  display:flex; align-items:center; justify-content:center;
+  padding-top:48px;
+}
+.bm-vs-circle {
+  width:46px; height:46px; border-radius:50%;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:900; color:#fff; letter-spacing:.05em;
+  box-shadow:0 4px 16px rgba(99,102,241,.4);
+  transition:.4s;
+}
+.bm-vs-winner { transform:scale(1.2); box-shadow:0 6px 24px rgba(251,191,36,.5); }
+
+/* 카드 */
+.bm-card {
+  min-height:180px; border-radius:14px; padding:16px;
+  border:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.02);
+  transition:.3s;
+}
+.bm-card-a { border-left:3px solid rgba(239,68,68,.4); }
+.bm-card-b { border-right:3px solid rgba(59,130,246,.4); }
+.bm-card-empty {
+  height:100%; display:flex; align-items:center; justify-content:center;
+  text-align:center; color:rgba(255,255,255,.25); font-size:13px; line-height:1.7;
+  padding:30px 0;
+}
+.bm-card-loaded { animation:fadeInUp .3s ease; }
+.bm-score-big { font-size:52px; font-weight:900; line-height:1; letter-spacing:-.02em; }
+.bm-grade-badge { font-size:14px; font-weight:800; padding:3px 10px; border-radius:20px; display:inline-block; margin:6px 0; }
+.bm-apt-name { font-size:16px; font-weight:800; color:#fff; margin-bottom:4px; word-break:keep-all; }
+.bm-apt-addr { font-size:11px; color:rgba(255,255,255,.4); margin-bottom:12px; }
+.bm-mini-scores { display:flex; flex-direction:column; gap:4px; margin-top:10px; }
+.bm-mini-row { display:flex; align-items:center; gap:6px; font-size:11px; }
+.bm-mini-lbl { color:rgba(255,255,255,.5); width:44px; flex-shrink:0; }
+.bm-mini-bar-wrap { flex:1; height:5px; background:rgba(255,255,255,.08); border-radius:3px; overflow:hidden; }
+.bm-mini-bar { height:100%; border-radius:3px; transition:width .6s ease; }
+.bm-mini-val { width:26px; text-align:right; color:rgba(255,255,255,.7); }
+
+/* 승자 표시 */
+.bm-card-win { box-shadow:0 0 0 2px rgba(251,191,36,.5) !important; }
+.bm-win-crown { text-align:center; font-size:11px; color:#fbbf24; font-weight:700; margin-top:8px; }
+
+/* 비교 바 */
+#bm-compare-bars {
+  padding:16px 24px;
+  border-top:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.01);
+}
+.bm-bars-title { font-size:13px; font-weight:700; color:rgba(255,255,255,.6); margin-bottom:12px; letter-spacing:.04em; }
+.bm-bar-row { display:grid; grid-template-columns:1fr 80px 1fr; gap:8px; align-items:center; margin-bottom:8px; }
+.bm-bar-a-wrap { display:flex; justify-content:flex-end; align-items:center; gap:6px; }
+.bm-bar-b-wrap { display:flex; align-items:center; gap:6px; }
+.bm-bar-lbl { font-size:10px; color:rgba(255,255,255,.4); text-align:center; white-space:nowrap; }
+.bm-seg { height:8px; border-radius:4px; transition:width .6s ease; }
+.bm-seg-a { background:linear-gradient(90deg,rgba(239,68,68,.3),rgba(239,68,68,.7)); }
+.bm-seg-b { background:linear-gradient(90deg,rgba(59,130,246,.7),rgba(59,130,246,.3)); }
+.bm-seg-win { opacity:1 !important; }
+.bm-seg-lose { opacity:.4; }
+
+/* 푸터 */
+#bm-footer { padding:16px 24px 24px; border-top:1px solid rgba(255,255,255,.07); }
+.bm-share-btn {
+  flex:1; padding:14px; border:none; border-radius:12px; cursor:pointer;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  color:#fff; font-size:14px; font-weight:800; letter-spacing:.04em;
+  transition:.2s; min-width:150px;
+}
+.bm-share-btn:hover { opacity:.88; transform:translateY(-1px); box-shadow:0 6px 20px rgba(99,102,241,.4); }
+.bm-dl-btn {
+  padding:14px 20px; border:1px solid rgba(255,255,255,.15); border-radius:12px; cursor:pointer;
+  background:rgba(255,255,255,.06); color:rgba(255,255,255,.8);
+  font-size:14px; font-weight:700; transition:.2s;
+}
+.bm-dl-btn:hover { background:rgba(255,255,255,.1); color:#fff; }
+#bm-winner-banner {
+  padding:16px 20px; border-radius:12px; text-align:center;
+  background:linear-gradient(135deg,rgba(251,191,36,.1),rgba(251,191,36,.05));
+  border:1px solid rgba(251,191,36,.3);
+}
+
+@keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:640px) {
+  .bm-arena { grid-template-columns:1fr; }
+  .bm-vs-col { padding:8px 0; }
+  .bm-box { max-width:100% !important; border-radius:16px 16px 0 0 !important; }
+}
+
 </style>
 <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=d453822cb7cb33406a188d8890eb0bf3&libraries=services"></script>
 </head>
 <body>
 
 <script defer>
+
+
+
+
+
+function saveWorkers() {
+  const url = document.getElementById('workers-url-in')?.value?.trim();
+  if(!url){ toast('Workers URL을 입력하세요','ng'); return; }
+  if(!url.startsWith('https://')){ toast('https:// 로 시작해야 합니다','ng'); return; }
+  CFG.setWorkers(url);
+  toast('✅ Workers URL 저장됨 — 다음 검색부터 적용됩니다','ok');
+  updateDot();
+}
 
 
 
@@ -3688,7 +3905,9 @@ const CFG={
   get molit(){ return localStorage.getItem('molit') || this._DEFAULT_KEY; },
   set molit(v){ localStorage.setItem('molit', v.trim()); },
   save(k){ const t=k.trim(); localStorage.setItem('molit',t); },
-  ok(){ return (localStorage.getItem('molit')||this._DEFAULT_KEY).length > 10; }
+  ok(){ return (localStorage.getItem('molit')||this._DEFAULT_KEY).length > 10; },
+  get workersUrl(){ return localStorage.getItem('workersUrl')||''; },
+  setWorkers(url){ localStorage.setItem('workersUrl', url.trim()); }
 };
 
 const HUBS=[
@@ -4295,42 +4514,55 @@ async function fetchMolit(lawd,ym){
     + `&LAWD_CD=${lawd}&DEAL_YMD=${ym}`
     + `&numOfRows=1000&pageNo=1&_type=json`;
 
-  // CORS 프록시 2개를 경쟁적으로 요청 → 먼저 성공한 것 사용
-  const PROXIES = [
+  // Cloudflare Workers 프록시 URL (workers.js 배포 후 아래 URL 업데이트)
+  const WORKERS_URL = CFG.workersUrl || '';
+
+  // 사용할 프록시 목록 (Workers URL이 설정된 경우 최우선)
+  const proxies = [
+    ...(WORKERS_URL ? [`${WORKERS_URL}?url=${encodeURIComponent(apiUrl)}`] : []),
     `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(apiUrl)}`,
   ];
 
-  // Promise.any: 하나라도 성공하면 즉시 반환, 둘 다 실패하면 []
-  return Promise.any(
-    PROXIES.map(proxyUrl =>
-      fetch(proxyUrl, {signal: AbortSignal.timeout(8000)})
-        .then(r => { if(!r.ok) throw new Error(r.status); return r.json(); })
-        .then(data => {
-          // JSON 응답 구조 파싱
-          let items = data?.response?.body?.items?.item
-            ?? data?.body?.items?.item
-            ?? data?.items?.item
-            ?? null;
-          if(!items) throw new Error('no items');
-          const arr = Array.isArray(items) ? items : [items];
-          const result = arr.map(i => ({
-            name:  (i.aptNm||'').trim(),
-            price: parseInt((i.dealAmount||'0').replace(/,/g,''), 10)||0,
-            area:  parseFloat(i.excluUseAr||0)||0,
-            floor: String(i.floor||''),
-            year:  parseInt(i.dealYear||0, 10)||0,
-            month: parseInt(i.dealMonth||0, 10)||0,
-            day:   parseInt(i.dealDay||0, 10)||0,
-          })).filter(r => r.price > 0 && r.area > 0);
-          console.log(`[AptScore] ✅ 실거래 수신: ${lawd}/${ym} → ${result.length}건`);
+  const tryFetch = async (url) => {
+    const r = await fetch(url, {signal: AbortSignal.timeout(8000)});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const text = await r.text();
+    // allorigins는 text, codetabs는 json 반환
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error('parse fail'); }
+    const items = data?.response?.body?.items?.item
+      ?? data?.body?.items?.item
+      ?? data?.items?.item
+      ?? null;
+    if(!items) throw new Error('no items');
+    const arr = Array.isArray(items) ? items : [items];
+    return arr.map(i => ({
+      name:  (i.aptNm||'').trim(),
+      price: parseInt((i.dealAmount||'0').replace(/,/g,''), 10)||0,
+      area:  parseFloat(i.excluUseAr||0)||0,
+      floor: String(i.floor||''),
+      year:  parseInt(i.dealYear||0, 10)||0,
+      month: parseInt(i.dealMonth||0, 10)||0,
+      day:   parseInt(i.dealDay||0, 10)||0,
+    })).filter(r => r.price > 0 && r.area > 0);
+  };
+
+  // 순차 시도 (첫 번째 성공 즉시 반환)
+  return (async () => {
+    for(const proxy of proxies){
+      try{
+        const result = await tryFetch(proxy);
+        if(result.length > 0){
+          console.log(`[AptScore] ✅ ${lawd}/${ym}: ${result.length}건`);
           return result;
-        })
-    )
-  ).catch(() => {
-    console.warn(`[AptScore] ⚠️ 실거래 실패: ${lawd}/${ym}`);
+        }
+      }catch(e){
+        console.warn(`[AptScore] ⚠️ ${lawd}/${ym}: ${proxy.slice(0,50)}… ${e.message}`);
+      }
+    }
     return [];
-  });
+  })();
 }
 
 /* ══════════════════════════════════════════
@@ -4843,6 +5075,8 @@ function newSearch(){
 document.addEventListener('DOMContentLoaded',()=>{
   const molitIn = document.getElementById('molit-in');
   if(molitIn) molitIn.value=CFG.molit;
+  const workersIn = document.getElementById('workers-url-in');
+  if(workersIn) workersIn.value = CFG.workersUrl || '';
   updateDot();
   initRegionBrowser();
   // 전국 DB 백그라운드 로딩 시작
@@ -5085,49 +5319,9 @@ function shareScoreCard() {
 // ════════════════════════════════════════════════════
 // 🎯 바이럴 기능 3: 단지 라이벌 배틀
 // ════════════════════════════════════════════════════
-let _battleA = null, _battleB = null;
 let _battleResults = {};
 
-function openBattle() {
-  const modal = document.getElementById('battle-modal');
-  if(!modal) return;
-  // 초기화 후 열기
-  _battleA = null; _battleB = null; _battleResults = {};
-  const ia=document.getElementById('battle-si-a');
-  const ib=document.getElementById('battle-si-b');
-  if(ia) ia.value=''; if(ib) ib.value='';
-  const res=document.getElementById('battle-result');
-  if(res) res.innerHTML='<div style="text-align:center;color:rgba(255,255,255,.3);font-size:14px;padding:20px 0;">두 단지를 선택하면 비교 결과가 표시됩니다</div>';
-  modal.style.display='flex';
-  document.body.style.overflow='hidden';
-  // 배틀 AC 이벤트 등록
-  setupBattleAC('A');
-  setupBattleAC('B');
-}
 
-function setupBattleAC(slot) {
-  const inp = document.getElementById('battle-si-'+slot.toLowerCase());
-  const acEl = document.getElementById('battle-ac-'+slot.toLowerCase());
-  if(!inp || !acEl) return;
-  inp.oninput = () => {
-    clearTimeout(inp._t);
-    inp._t = setTimeout(()=>{
-      const v = inp.value.trim();
-      if(!v){ acEl.innerHTML=''; acEl.style.display='none'; return; }
-      const results = searchAC(v).slice(0,8);
-      if(!results.length){ acEl.innerHTML=''; acEl.style.display='none'; return; }
-      acEl.innerHTML = results.map(a=>`
-        <div class="battle-ac-item" onclick="selectBattleApt('${slot}',${_aptIdx(a)})">
-          <strong>${a.n}</strong>
-          <span style="font-size:11px;color:rgba(255,255,255,.4);margin-left:6px;">${a.city||''} ${a.gu||''}</span>
-        </div>`).join('');
-      acEl.style.display='block';
-    }, 150);
-  };
-  inp.addEventListener('keydown', e=>{
-    if(e.key==='Enter') { clearTimeout(inp._t); setBattleAptByName(slot, inp.value.trim()); }
-  });
-}
 
 function selectBattleApt(slot, idx) {
   const apt = _AMAP[idx] || APT_DB[idx];
@@ -5141,109 +5335,10 @@ function selectBattleApt(slot, idx) {
   toast(`${apt.n} 선택됨`,'ok');
 }
 
-function setBattleAptByName(slot, name) {
-  if(!name) return;
-  const apt = APT_DB.find(a=>a&&a.n&&(a.n===name||a.n.replace(/\s/g,'').includes(name.replace(/\s/g,''))));
-  if(!apt) { toast('해당 아파트를 찾을 수 없습니다. 자동완성 목록에서 선택하세요','ng'); return; }
-  if(slot==='A') _battleA=apt; else _battleB=apt;
-  renderBattleModal();
-}
 
-function setBattleApt(slot) {
-  const inp = document.getElementById('battle-si-'+slot.toLowerCase());
-  if(!inp) return;
-  setBattleAptByName(slot, inp.value.trim());
-}
 
-function renderBattleModal() {
-  const el = document.getElementById('battle-result');
-  if(!el) return;
-  const nameA = _battleA?.n||'단지 A 선택';
-  const nameB = _battleB?.n||'단지 B 선택';
-  const gradeA = _battleA ? estimateGrade(_battleA) : '-';
-  const gradeB = _battleB ? estimateGrade(_battleB) : '-';
-  const GRADE_C = {S:'#d4a654',A:'#3b82f6',B:'#f59e0b',C:'#f97316',D:'#ef4444'};
-  const scoreA = _battleResults[_battleA?.n]?.total ?? null;
-  const scoreB = _battleResults[_battleB?.n]?.total ?? null;
-  const scoreGradeA = scoreA!=null ? (scoreA>=80?'S':scoreA>=70?'A':scoreA>=60?'B':scoreA>=50?'C':'D') : gradeA;
-  const scoreGradeB = scoreB!=null ? (scoreB>=80?'S':scoreB>=70?'A':scoreB>=60?'B':scoreB>=50?'C':'D') : gradeB;
-  const winner = (scoreA!=null && scoreB!=null) ? (scoreA>scoreB?'A':scoreA<scoreB?'B':'tie') : 'tie';
-  const gc = g => GRADE_C[g] || '#888';
 
-  const cardA = `
-    <div style="flex:1;min-width:0;padding:16px;background:rgba(212,166,84,.06);border-radius:12px;border:1px solid ${winner==='A'?'rgba(212,166,84,.5)':'rgba(255,255,255,.06)'};text-align:center;">
-      <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px;">🔶 단지 A</div>
-      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:10px;word-break:keep-all;">${nameA}</div>
-      ${scoreA!=null
-        ? `<div style="font-size:48px;font-weight:900;color:${gc(scoreGradeA)};line-height:1.1;">${scoreA}</div>
-           <div style="font-size:13px;font-weight:700;color:${gc(scoreGradeA)};margin:4px 0 8px;">${scoreGradeA}등급</div>`
-        : `<div style="font-size:24px;color:rgba(255,255,255,.3);margin:10px 0;">예상<br/>${gradeA}등급</div>`
-      }
-      ${winner==='A'?'<div style="font-size:13px;color:#fbbf24;font-weight:700;margin-top:4px;">🏆 승리</div>':''}
-      ${_battleA ? `<button onclick="battleAnalyze('A')" style="margin-top:10px;padding:8px 18px;background:rgba(212,166,84,.8);color:#000;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;width:100%;">🔍 분석하기</button>` : ''}
-    </div>`;
-
-  const cardB = `
-    <div style="flex:1;min-width:0;padding:16px;background:rgba(59,130,246,.06);border-radius:12px;border:1px solid ${winner==='B'?'rgba(59,130,246,.5)':'rgba(255,255,255,.06)'};text-align:center;">
-      <div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:6px;">🔷 단지 B</div>
-      <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:10px;word-break:keep-all;">${nameB}</div>
-      ${scoreB!=null
-        ? `<div style="font-size:48px;font-weight:900;color:${gc(scoreGradeB)};line-height:1.1;">${scoreB}</div>
-           <div style="font-size:13px;font-weight:700;color:${gc(scoreGradeB)};margin:4px 0 8px;">${scoreGradeB}등급</div>`
-        : `<div style="font-size:24px;color:rgba(255,255,255,.3);margin:10px 0;">예상<br/>${gradeB}등급</div>`
-      }
-      ${winner==='B'?'<div style="font-size:13px;color:#fbbf24;font-weight:700;margin-top:4px;">🏆 승리</div>':''}
-      ${_battleB ? `<button onclick="battleAnalyze('B')" style="margin-top:10px;padding:8px 18px;background:rgba(59,130,246,.8);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;width:100%;">🔍 분석하기</button>` : ''}
-    </div>`;
-
-  // 비교 항목
-  const rows = [
-    {label:'준공연도', va:_battleA?.yr||'-', vb:_battleB?.yr||'-', better:((_battleA?.yr||0)>(_battleB?.yr||0))?'A':((_battleA?.yr||0)<(_battleB?.yr||0))?'B':'tie'},
-    {label:'세대수', va:_battleA?.hh?(_battleA.hh.toLocaleString()+'세대'):'-', vb:_battleB?.hh?(_battleB.hh.toLocaleString()+'세대'):'-', better:'tie'},
-    {label:'역거리', va:(_battleA?.sd&&_battleA.sd<9000)?_battleA.sd+'m':'-', vb:(_battleB?.sd&&_battleB.sd<9000)?_battleB.sd+'m':'-', better:((_battleA?.sd||9999)<(_battleB?.sd||9999))?'A':((_battleA?.sd||9999)>(_battleB?.sd||9999))?'B':'tie'},
-  ];
-  if(scoreA!=null&&scoreB!=null) rows.unshift({label:'실제 점수', va:scoreA+'점', vb:scoreB+'점', better:winner});
-
-  el.innerHTML = `
-    <div style="display:flex;gap:12px;align-items:stretch;margin-bottom:12px;">
-      ${cardA}
-      <div style="display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:rgba(201,168,76,.7);flex-shrink:0;padding:0 4px;">VS</div>
-      ${cardB}
-    </div>
-    <div style="background:rgba(255,255,255,.03);border-radius:10px;overflow:hidden;margin-bottom:12px;">
-      ${rows.map(r=>`
-        <div style="display:grid;grid-template-columns:1fr 70px 1fr;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);">
-          <div style="text-align:right;font-size:13px;font-weight:${r.better==='A'?'800':'400'};color:${r.better==='A'?'#d4a654':'rgba(255,255,255,.5)'};">${r.va}</div>
-          <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.35);font-weight:600;">${r.label}</div>
-          <div style="text-align:left;font-size:13px;font-weight:${r.better==='B'?'800':'400'};color:${r.better==='B'?'#3b82f6':'rgba(255,255,255,.5)'};">${r.vb}</div>
-        </div>`).join('')}
-    </div>
-    ${scoreA!=null&&scoreB!=null ? `
-      <button onclick="shareBattleImage()" style="width:100%;padding:12px;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-top:4px;">
-        ⚔️ 배틀 결과 이미지로 공유하기
-      </button>` : ''}
-  `;
-}
-
-async function battleAnalyze(slot) {
-  const apt = slot==='A' ? _battleA : _battleB;
-  if(!apt) return;
-  toast(`${apt.n} 분석 중...`,'inf');
-  try {
-    const R = await analyze(apt);
-    _battleResults[apt.n] = R;
-    renderBattleModal();
-  } catch(e) { toast('분석 실패: '+e.message,'ng'); }
-}
-
-function shareBattle() {
-  if(!_battleA||!_battleB) return;
-  const rA=_battleResults[_battleA.n], rB=_battleResults[_battleB.n];
-  const winner = rA&&rB?(rA.total>rB.total?_battleA.n:rB.total>rA.total?_battleB.n:'무승부'):'';
-  const text = `⚔️ 아파트 라이벌 배틀!\n🏢 ${_battleA.n} vs ${_battleB.n}\n${rA?_battleA.n+': '+rA.total+'점':''}\n${rB?_battleB.n+': '+rB.total+'점':''}\n${winner?'🏆 승자: '+winner:''}\n🔗 stock-predictor-dx2.pages.dev`;
-  if(navigator.share) navigator.share({title:'아파트 라이벌 배틀',text,url:'https://stock-predictor-dx2.pages.dev'});
-  else navigator.clipboard?.writeText(text).then(()=>toast('클립보드 복사!','ok'));
-}
+async 
 
 // ════════════════════════════════════════════════════
 // 🎯 바이럴 기능 4: 거주자 투표 (IndexedDB 기반)
@@ -5970,28 +6065,6 @@ function closeScoreCard() {
   if(m) m.style.display = 'none';
 }
 
-function closeBattle() {
-  // 배틀 모달 닫기 + 초기화
-  const m = document.getElementById('battle-modal');
-  if(m) m.style.display = 'none';
-  // 입력값 초기화
-  const ia = document.getElementById('battle-si-a');
-  const ib = document.getElementById('battle-si-b');
-  if(ia) ia.value = '';
-  if(ib) ib.value = '';
-  // 자동완성 목록 닫기
-  const aca = document.getElementById('battle-ac-a');
-  const acb = document.getElementById('battle-ac-b');
-  if(aca) { aca.innerHTML=''; aca.style.display='none'; }
-  if(acb) { acb.innerHTML=''; acb.style.display='none'; }
-  // 상태 초기화
-  _battleA = null;
-  _battleB = null;
-  _battleResults = {};
-  // 결과 영역 초기화
-  const res = document.getElementById('battle-result');
-  if(res) res.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.3);font-size:14px;padding:20px 0;">두 단지를 선택하면 비교 결과가 표시됩니다</div>';
-}
 
 function filterByGrade(grade) {
   window._gradeFilter = window._gradeFilter || null;
@@ -6205,46 +6278,406 @@ function scrollToFilter() {
 }
 
 
-function resetBattle() {
-  // 입력값 초기화
-  const ia = document.getElementById('battle-si-a');
-  const ib = document.getElementById('battle-si-b');
-  if(ia) ia.value = '';
-  if(ib) ib.value = '';
-  // 자동완성 닫기
-  ['battle-ac-a','battle-ac-b'].forEach(id => {
-    const el = document.getElementById(id);
-    if(el) { el.innerHTML=''; el.style.display='none'; }
-  });
-  // 상태 초기화
-  _battleA = null;
-  _battleB = null;
-  _battleResults = {};
-  // 결과 초기화
-  const res = document.getElementById('battle-result');
-  if(res) res.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.3);font-size:14px;padding:28px 0;">두 단지를 선택하면 비교 결과가 표시됩니다</div>';
-  // 인풋 포커스
-  if(ia) ia.focus();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* ══════════════════════════════════════════
+   아파트 라이벌 배틀 시스템 v3
+══════════════════════════════════════════ */
+let _battleA = null, _battleB = null;
+let _battleRA = null, _battleRB = null;   // analyze 결과
+let _bmAcIdx = -1;
+const SIDE_COLOR  = {A:'#ef4444', B:'#3b82f6'};
+
+function openBattle() {
+  const modal = document.getElementById('battle-modal');
+  if(!modal) return;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  resetBattle();
 }
 
+function closeBattle() {
+  const m = document.getElementById('battle-modal');
+  if(m) m.style.display = 'none';
+  document.body.style.overflow = '';
+}
 
+function resetBattle() {
+  _battleA = null; _battleB = null; _battleRA = null; _battleRB = null;
+  ['battle-si-a','battle-si-b'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  ['battle-ac-a','battle-ac-b'].forEach(id => {
+    const el = document.getElementById(id); if(el) { el.innerHTML=''; el.style.display='none'; }
+  });
+  const empty = '<div class="bm-card-empty">아파트를 검색하고<br>분석 버튼을 눌러주세요</div>';
+  ['bm-card-a','bm-card-b'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) { el.innerHTML=empty; el.className='bm-card '+(id.endsWith('a')?'bm-card-a':'bm-card-b'); }
+  });
+  const vs = document.getElementById('bm-vs-badge');
+  if(vs) { vs.textContent='VS'; vs.className='bm-vs-circle'; }
+  const bars = document.getElementById('bm-compare-bars');
+  if(bars) bars.style.display='none';
+  const footer = document.getElementById('bm-footer');
+  if(footer) footer.style.display='none';
+}
 
+/* 자동완성 */
+function battleACInput(side) {
+  const inp = document.getElementById('battle-si-'+side);
+  const acEl = document.getElementById('battle-ac-'+side);
+  if(!inp||!acEl) return;
+  clearTimeout(inp._bt);
+  inp._bt = setTimeout(()=>{
+    const v = inp.value.trim();
+    _bmAcIdx = -1;
+    if(!v){ acEl.innerHTML=''; acEl.style.display='none'; return; }
+    const results = searchAC(v).slice(0,8);
+    if(!results.length){ acEl.innerHTML=''; acEl.style.display='none'; return; }
+    acEl.innerHTML = results.map((a,i)=>
+      `<div class="bm-ac-item" data-idx="${i}"
+        onmousedown="event.preventDefault();battlePickAC('${side}','${a.n.replace(/'/g,"\\'")}')">
+        <span style="font-weight:700;">${highlight(a.n,v)}</span>
+        <span style="color:rgba(255,255,255,.4);font-size:11px;margin-left:6px;">${a.city||''} · ${a.yr||''}년</span>
+      </div>`
+    ).join('');
+    acEl.style.display='block';
+  }, 120);
+}
 
+function battleACKey(e, side) {
+  const acEl = document.getElementById('battle-ac-'+side);
+  const items = acEl?.querySelectorAll('.bm-ac-item');
+  if(!items?.length) { if(e.key==='Enter') doBattleAnalyze(side.toUpperCase()); return; }
+  if(e.key==='ArrowDown'){ e.preventDefault(); _bmAcIdx=Math.min(_bmAcIdx+1,items.length-1); items.forEach((el,i)=>el.classList.toggle('focused',i===_bmAcIdx)); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); _bmAcIdx=Math.max(_bmAcIdx-1,-1); items.forEach((el,i)=>el.classList.toggle('focused',i===_bmAcIdx)); }
+  else if(e.key==='Enter'){
+    if(_bmAcIdx>=0&&items[_bmAcIdx]) items[_bmAcIdx].dispatchEvent(new MouseEvent('mousedown'));
+    else doBattleAnalyze(side.toUpperCase());
+    acEl.style.display='none';
+  }
+  else if(e.key==='Escape') acEl.style.display='none';
+}
 
+function battlePickAC(side, name) {
+  const inp = document.getElementById('battle-si-'+side);
+  const acEl = document.getElementById('battle-ac-'+side);
+  if(inp) inp.value = name;
+  if(acEl){ acEl.innerHTML=''; acEl.style.display='none'; }
+  // 즉시 아파트 선택
+  const apt = APT_DB.find(a => a&&a.n===name);
+  if(apt) {
+    if(side==='a') _battleA=apt; else _battleB=apt;
+    renderBattlePending(side.toUpperCase(), apt);
+  }
+}
 
+/* 선택만 된 상태 카드 */
+function renderBattlePending(side, apt) {
+  const cardId = 'bm-card-'+side.toLowerCase();
+  const el = document.getElementById(cardId);
+  if(!el) return;
+  const gc = GRADE_COLOR[estimateGrade(apt)];
+  const eg = estimateGrade(apt);
+  el.innerHTML = `
+    <div class="bm-card-loaded">
+      <div class="bm-apt-name">${apt.n}</div>
+      <div class="bm-apt-addr">${apt.a||''} · ${apt.yr||''}년 · ${apt.hh||''}세대</div>
+      <div style="text-align:center;padding:16px 0;">
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px;">예상등급</div>
+        <div class="bm-score-big" style="font-size:40px;color:${gc};">${eg}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:8px;">▶ 분석 버튼으로 정확한 점수 확인</div>
+      </div>
+    </div>`;
+  el.className = `bm-card ${'bm-card-'+side.toLowerCase()} bm-card-loaded`;
+}
 
+/* 분석 실행 */
+async function doBattleAnalyze(side) {
+  const apt = side==='A' ? _battleA : _battleB;
+  if(!apt) {
+    // 입력창에서 아파트 찾기
+    const val = document.getElementById('battle-si-'+side.toLowerCase())?.value?.trim();
+    if(!val){ toast('먼저 아파트를 검색하세요','ng'); return; }
+    const found = APT_DB.find(a=>a&&a.n&&(a.n===val||a.n.replace(/\s/g,'').includes(val.replace(/\s/g,''))));
+    if(!found){ toast('해당 아파트를 찾을 수 없습니다','ng'); return; }
+    if(side==='A') _battleA=found; else _battleB=found;
+    renderBattlePending(side, found);
+    return doBattleAnalyze(side);
+  }
 
+  const btn = document.querySelector(`#bm-side-${side.toLowerCase()} .bm-analyze-btn`);
+  if(btn){ btn.textContent='분석 중…'; btn.disabled=true; }
+  toast(`${apt.n} 분석 중…`,'inf');
 
+  try {
+    const R = await analyze(apt);
+    if(side==='A') _battleRA=R; else _battleRB=R;
+    renderBattleCard(side, apt, R);
+    toast(`${apt.n} 분석 완료!`,'ok');
 
+    // 둘 다 완료되면 비교 표시
+    if(_battleRA && _battleRB) renderBattleResult();
+  } catch(e) {
+    toast('분석 실패: '+e.message,'ng');
+  } finally {
+    if(btn){ btn.textContent='분석 ▶'; btn.disabled=false; }
+  }
+}
 
+/* 분석 완료 카드 */
+function renderBattleCard(side, apt, R) {
+  const cardId = 'bm-card-'+side.toLowerCase();
+  const el = document.getElementById(cardId);
+  if(!el) return;
+  const gc = GRADE_COLOR[R.grade];
+  const sm = SCORE_META;
+  const miniRows = Object.keys(sm).map(k => {
+    const sc = R.scores[k]||0;
+    const w = Math.round(sc);
+    const col = sc>=70?'#22c55e':sc>=50?'#f59e0b':'#ef4444';
+    return `<div class="bm-mini-row">
+      <span class="bm-mini-lbl">${sm[k].lbl}</span>
+      <div class="bm-mini-bar-wrap"><div class="bm-mini-bar" style="width:${w}%;background:${col};"></div></div>
+      <span class="bm-mini-val">${sc}</span>
+    </div>`;
+  }).join('');
 
+  el.innerHTML = `
+    <div class="bm-card-loaded">
+      <div class="bm-apt-name">${apt.n}</div>
+      <div class="bm-apt-addr">${apt.a||''}</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;margin:10px 0;">
+        <div class="bm-score-big" style="color:${gc};">${R.total}</div>
+        <div>
+          <span class="bm-grade-badge" style="background:${gc}22;color:${gc};border:1px solid ${gc}44;">${R.grade}등급</span>
+          <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:2px;">/ 100점</div>
+        </div>
+      </div>
+      <div class="bm-mini-scores">${miniRows}</div>
+    </div>`;
+  el.className = `bm-card ${'bm-card-'+side.toLowerCase()} bm-card-loaded`;
+}
 
+/* 비교 결과 렌더링 */
+function renderBattleResult() {
+  const rA = _battleRA, rB = _battleRB;
+  if(!rA||!rB) return;
 
+  // 승자 판정
+  const winner = rA.total > rB.total ? 'A' : rA.total < rB.total ? 'B' : 'tie';
+  const diff = Math.abs(rA.total - rB.total).toFixed(1);
+  const winnerName = winner==='A'?rA.name:winner==='B'?rB.name:'';
 
+  // 카드 강조
+  document.getElementById('bm-card-a')?.classList.toggle('bm-card-win', winner==='A');
+  document.getElementById('bm-card-b')?.classList.toggle('bm-card-win', winner==='B');
 
+  // VS 배지 → 점수차
+  const vs = document.getElementById('bm-vs-badge');
+  if(vs) {
+    vs.innerHTML = winner==='tie'
+      ? '<span style="font-size:10px;">무승부</span>'
+      : `<span style="font-size:9px;line-height:1.3;">${diff}<br>점차</span>`;
+    vs.className = 'bm-vs-circle bm-vs-winner';
+  }
 
+  // 항목별 비교 바
+  const barsEl = document.getElementById('bm-compare-bars');
+  const barsInner = document.getElementById('bm-bars-inner');
+  if(barsEl && barsInner) {
+    const sm = SCORE_META;
+    barsInner.innerHTML = Object.keys(sm).map(k => {
+      const sA = rA.scores[k]||0, sB = rB.scores[k]||0;
+      const winK = sA>sB?'A':sA<sB?'B':'tie';
+      return `<div class="bm-bar-row">
+        <div class="bm-bar-a-wrap">
+          <span style="font-size:11px;font-weight:${winK==='A'?'800':'400'};color:${winK==='A'?'#f87171':'rgba(255,255,255,.4)'};">${sA}</span>
+          <div style="flex:1;max-width:100px;display:flex;justify-content:flex-end;">
+            <div class="bm-seg bm-seg-a ${winK==='A'?'bm-seg-win':'bm-seg-lose'}" style="width:${sA}%;max-width:100%;"></div>
+          </div>
+        </div>
+        <div class="bm-bar-lbl">${sm[k].icon} ${sm[k].lbl}</div>
+        <div class="bm-bar-b-wrap">
+          <div style="flex:1;max-width:100px;">
+            <div class="bm-seg bm-seg-b ${winK==='B'?'bm-seg-win':'bm-seg-lose'}" style="width:${sB}%;max-width:100%;"></div>
+          </div>
+          <span style="font-size:11px;font-weight:${winK==='B'?'800':'400'};color:${winK==='B'?'#60a5fa':'rgba(255,255,255,.4)'};">${sB}</span>
+        </div>
+      </div>`;
+    }).join('');
+    barsEl.style.display = 'block';
+  }
 
+  // 푸터 승자 배너
+  const footer = document.getElementById('bm-footer');
+  const banner = document.getElementById('bm-winner-banner');
+  if(footer && banner) {
+    const wCol = winner==='A'?'#f87171':winner==='B'?'#60a5fa':'#d4a654';
+    banner.innerHTML = winner==='tie'
+      ? `<div style="font-size:22px;margin-bottom:6px;">🤝</div>
+         <div style="font-size:18px;font-weight:900;color:#d4a654;">완전 무승부!</div>
+         <div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px;">${rA.name} ${rA.total}점 · ${rB.name} ${rB.total}점</div>`
+      : `<div style="font-size:28px;margin-bottom:6px;">🏆</div>
+         <div style="font-size:20px;font-weight:900;color:${wCol};">${winnerName} 승리!</div>
+         <div style="font-size:13px;color:rgba(255,255,255,.5);margin-top:4px;">${rA.name} <b style="color:#f87171;">${rA.total}점</b> vs ${rB.name} <b style="color:#60a5fa;">${rB.total}점</b> · 차이: ${diff}점</div>`;
+    footer.style.display = 'block';
+  }
+}
 
+/* 결과 공유 */
+function shareBattleResult() {
+  const rA=_battleRA, rB=_battleRB;
+  if(!rA||!rB){ toast('두 단지를 모두 분석하세요','ng'); return; }
+  const winner = rA.total>rB.total?rA.name:rB.total>rA.total?rB.name:'무승부';
+  const msg = `⚔️ 아파트 라이벌 배틀 결과\n\n🔴 ${rA.name}: ${rA.total}점 (${rA.grade}등급)\n🔵 ${rB.name}: ${rB.total}점 (${rB.grade}등급)\n\n🏆 ${winner==='무승부'?'무승부!':winner+' 승리!'}\n\n📊 AptScore로 내 아파트 점수 확인\n🔗 https://stock-predictor-dx2.pages.dev`;
+  if(navigator.share){
+    navigator.share({title:'아파트 라이벌 배틀', text:msg, url:'https://stock-predictor-dx2.pages.dev'})
+      .catch(()=>{ navigator.clipboard?.writeText(msg); toast('클립보드에 복사됐습니다!','ok'); });
+  } else {
+    navigator.clipboard?.writeText(msg).then(()=>toast('클립보드에 복사됐습니다!','ok'))
+      .catch(()=>toast('공유 기능을 지원하지 않는 브라우저입니다','ng'));
+  }
+}
+
+/* Canvas 이미지 생성 + 다운로드 */
+function downloadBattleCard() {
+  const rA=_battleRA, rB=_battleRB;
+  if(!rA||!rB){ toast('두 단지를 모두 분석하세요','ng'); return; }
+
+  const cv = document.getElementById('battle-share-canvas');
+  if(!cv) return;
+  const W=800, H=460;
+  cv.width=W; cv.height=H; cv.style.display='none';
+  const ctx = cv.getContext('2d');
+
+  // 배경
+  const bg = ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#0d1223'); bg.addColorStop(1,'#1a1f35');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // 좌우 컬러 패널
+  const lgA = ctx.createLinearGradient(0,0,360,H);
+  lgA.addColorStop(0,'rgba(239,68,68,.12)'); lgA.addColorStop(1,'rgba(239,68,68,.04)');
+  ctx.fillStyle=lgA; ctx.fillRect(0,0,360,H);
+  const lgB = ctx.createLinearGradient(440,0,W,H);
+  lgB.addColorStop(0,'rgba(59,130,246,.04)'); lgB.addColorStop(1,'rgba(59,130,246,.12)');
+  ctx.fillStyle=lgB; ctx.fillRect(440,0,360,H);
+
+  // 상단 타이틀
+  ctx.fillStyle='rgba(255,255,255,.06)';
+  ctx.fillRect(0,0,W,54);
+  ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='bold 16px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('⚔️  아파트 라이벌 배틀  |  AptScore', W/2, 32);
+
+  const winner = rA.total>rB.total?'A':rA.total<rB.total?'B':'tie';
+
+  function drawSide(R, side, x) {
+    const gc = GRADE_COLOR[R.grade]||'#888';
+    const col = side==='A'?'#f87171':'#60a5fa';
+    const isWin = winner===side;
+    // 이름
+    ctx.fillStyle=col; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(side==='A'?'🔴 단지 A':'🔵 단지 B', x, 88);
+    ctx.fillStyle=isWin?'#fff':'rgba(255,255,255,.85)';
+    ctx.font=`bold 17px sans-serif`;
+    const maxW = 300;
+    let name = R.name;
+    while(ctx.measureText(name).width > maxW && name.length>4) name=name.slice(0,-1)+'…';
+    ctx.fillText(name, x, 114);
+    // 점수
+    ctx.fillStyle=gc; ctx.font=`900 64px sans-serif`;
+    ctx.fillText(String(R.total), x, 186);
+    ctx.font='bold 18px sans-serif'; ctx.fillStyle=gc;
+    ctx.fillText(R.grade+'등급', x, 212);
+    // 항목
+    const keys = Object.keys(SCORE_META);
+    keys.forEach((k,i) => {
+      const sc = R.scores[k]||0;
+      const ky = 248 + i*26;
+      ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='11px sans-serif'; ctx.textAlign='center';
+      ctx.fillText(SCORE_META[k].lbl, x, ky);
+      // 바
+      const bW=110, bH=5, bX=x-bW/2, bY=ky+5;
+      ctx.fillStyle='rgba(255,255,255,.08)'; ctx.beginPath();
+      ctx.roundRect?ctx.roundRect(bX,bY,bW,bH,2):ctx.rect(bX,bY,bW,bH);
+      ctx.fill();
+      const fc=sc>=70?'#22c55e':sc>=50?'#f59e0b':'#ef4444';
+      ctx.fillStyle=fc; ctx.beginPath();
+      const fw=bW*(sc/100);
+      ctx.roundRect?ctx.roundRect(bX,bY,fw,bH,2):ctx.rect(bX,bY,fw,bH);
+      ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.6)'; ctx.textAlign='right';
+      ctx.fillText(String(sc), x+62, ky);
+    });
+    // 승자 크라운
+    if(isWin){
+      ctx.fillStyle='rgba(251,191,36,.2)';
+      ctx.strokeStyle='rgba(251,191,36,.5)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.roundRect?ctx.roundRect(x-80,64,160,22,11):ctx.rect(x-80,64,160,22);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#fbbf24'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('🏆 승리!', x, 79);
+    }
+  }
+
+  drawSide(rA,'A',180);
+  drawSide(rB,'B',620);
+
+  // VS 구분선
+  const vsG = ctx.createLinearGradient(W/2,60,W/2,H-20);
+  vsG.addColorStop(0,'rgba(255,255,255,0)');
+  vsG.addColorStop(.3,'rgba(255,255,255,.15)');
+  vsG.addColorStop(.7,'rgba(255,255,255,.15)');
+  vsG.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.strokeStyle=vsG; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(W/2,60); ctx.lineTo(W/2,H-30); ctx.stroke();
+
+  ctx.fillStyle='#6366f1'; ctx.beginPath();
+  ctx.arc(W/2,H/2-20,22,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('VS',W/2,H/2-15);
+
+  // 점수차
+  const diff = Math.abs(rA.total-rB.total).toFixed(1);
+  ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(`차이 ${diff}점`,W/2,H/2+10);
+
+  // 하단 워터마크
+  ctx.fillStyle='rgba(255,255,255,.2)'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('stock-predictor-dx2.pages.dev', W/2, H-12);
+
+  // 다운로드
+  const a = document.createElement('a');
+  a.href = cv.toDataURL('image/png');
+  a.download = `배틀_${rA.name}_vs_${rB.name}.png`;
+  a.click();
+  toast('📸 배틀 이미지 저장됨!','ok');
+}
 
 
 </script>
@@ -6257,36 +6690,84 @@ H4sIAKJcrmkC/5S9W49dx5Em+u5fUU8zJaB4sPKycuV6pNQ6ttry2LD6gp63AY6AMzieGaAbPedtQFFF
 
 <!-- ══ 배틀 모달 ══ -->
 <div class="modal overlay" id="battle-modal" onclick="if(event.target===this)closeBattle()">
-  <div class="modal-box" style="max-width:900px;">
-    <div class="modal-hd">
-      <div class="modal-title">⚔️ 아파트 라이벌 배틀</div>
+  <div class="modal-box bm-box">
+    <!-- 헤더 -->
+    <div class="modal-hd bm-hd">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:22px;">⚔️</span>
+        <div>
+          <div class="modal-title" style="margin:0;font-size:18px;">아파트 라이벌 배틀</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;">두 단지를 분석해 승자를 가립니다</div>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;align-items:center;">
-        <button onclick="resetBattle()" style="background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);color:#a5b4fc;padding:6px 14px;border-radius:8px;font-size:13px;cursor:pointer;">🔄 다시 시작</button>
+        <button onclick="resetBattle()" class="bm-reset-btn">🔄 초기화</button>
         <button class="modal-close" onclick="closeBattle()">✕</button>
       </div>
     </div>
-    <div id="battle-body">
-      <div class="battle-slots">
-        <div class="battle-slot" id="slot-0">
-          <div class="slot-empty" onclick="setBattleApt(0)">
-            <div style="font-size:32px;">🏠</div>
-            <div style="margin-top:8px;font-size:14px;color:rgba(255,255,255,.4);">아파트 1 선택</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.25);margin-top:4px;">클릭하여 검색</div>
+
+    <!-- 검색 + 결과 영역 -->
+    <div class="bm-arena">
+      <!-- 단지 A -->
+      <div class="bm-side" id="bm-side-a">
+        <div class="bm-side-label bm-label-a">🔴 단지 A</div>
+        <div class="bm-search-wrap">
+          <div style="position:relative;">
+            <input id="battle-si-a" type="text" placeholder="아파트명 검색…" autocomplete="off" class="bm-input"
+              oninput="battleACInput('a')" onkeydown="battleACKey(event,'a')">
+            <div id="battle-ac-a" class="bm-ac-list"></div>
           </div>
+          <button onclick="doBattleAnalyze('A')" class="bm-analyze-btn">분석 ▶</button>
         </div>
-        <div class="battle-vs">VS</div>
-        <div class="battle-slot" id="slot-1">
-          <div class="slot-empty" onclick="setBattleApt(1)">
-            <div style="font-size:32px;">🏠</div>
-            <div style="margin-top:8px;font-size:14px;color:rgba(255,255,255,.4);">아파트 2 선택</div>
-            <div style="font-size:12px;color:rgba(255,255,255,.25);margin-top:4px;">클릭하여 검색</div>
-          </div>
+        <div id="bm-card-a" class="bm-card bm-card-a">
+          <div class="bm-card-empty">아파트를 검색하고<br>분석 버튼을 눌러주세요</div>
         </div>
       </div>
-      <div id="battle-result" style="display:none;"></div>
+
+      <!-- VS -->
+      <div class="bm-vs-col">
+        <div class="bm-vs-circle" id="bm-vs-badge">VS</div>
+      </div>
+
+      <!-- 단지 B -->
+      <div class="bm-side" id="bm-side-b">
+        <div class="bm-side-label bm-label-b">🔵 단지 B</div>
+        <div class="bm-search-wrap">
+          <div style="position:relative;">
+            <input id="battle-si-b" type="text" placeholder="아파트명 검색…" autocomplete="off" class="bm-input"
+              oninput="battleACInput('b')" onkeydown="battleACKey(event,'b')">
+            <div id="battle-ac-b" class="bm-ac-list"></div>
+          </div>
+          <button onclick="doBattleAnalyze('B')" class="bm-analyze-btn">분석 ▶</button>
+        </div>
+        <div id="bm-card-b" class="bm-card bm-card-b">
+          <div class="bm-card-empty">아파트를 검색하고<br>분석 버튼을 눌러주세요</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 항목별 비교 바 -->
+    <div id="bm-compare-bars" style="display:none;">
+      <div class="bm-bars-title">📊 항목별 점수 비교</div>
+      <div id="bm-bars-inner"></div>
+    </div>
+
+    <!-- 결과 + 공유 버튼 -->
+    <div id="bm-footer" style="display:none;">
+      <div id="bm-winner-banner"></div>
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;">
+        <button onclick="shareBattleResult()" class="bm-share-btn">
+          📤 결과 공유하기
+        </button>
+        <button onclick="downloadBattleCard()" class="bm-dl-btn">
+          📸 이미지 저장
+        </button>
+      </div>
+      <canvas id="battle-share-canvas" style="display:none;"></canvas>
     </div>
   </div>
 </div>
+
 
 <div class="modal overlay" id="score-card-modal" onclick="if(event.target===this)this.style.display='none'">
   <div class="modal-box" style="max-width:860px;">
