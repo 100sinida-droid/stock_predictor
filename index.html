@@ -4145,7 +4145,7 @@ const HUBS=[
    각 항목: k(검색키워드배열), n(정식명), a(주소), city(시), gu(구/군), dong(동/읍)
             la(위도), lo(경도), yr(건축년도), st(인근역), sd(역거리m)
 ══════════════════════════════════════════════════════════════ */
-const APT_DB=[
+window.APT_DB=const APT_DB=[
   /* ── 서울 서초구 ── */
   {k:['래미안퍼스티지','퍼스티지','반포퍼스티지'],n:'래미안퍼스티지',city:'서울',gu:'서초구',dong:'반포동',a:'서울시 서초구 신반포로 지하 194',hh:1446,price:11000,la:37.5068,lo:127.0046,yr:2009,st:'신반포역',sd:150},
   {k:['아크로리버파크','반포아크로'],n:'아크로리버파크',city:'서울',gu:'서초구',dong:'반포동',a:'서울시 서초구 신반포로 지하 194',hh:1446,price:11000,la:37.5077,lo:127.0059,yr:2016,st:'신반포역',sd:180},
@@ -4884,7 +4884,7 @@ let lastRecs=[], currentApt=null;
 async function analyze(apt, mode){
   currentApt=apt;
   setMsg(`✅ DB 매칭: ${apt.n}`);
-  // await sleep(50); // 속도 최적화를 위해 제거
+  // // await sleep(50); // 속도 최적화를 위해 제거
 
   // 실거래 수집
   const lawd=LAWD[apt.gu]||'11680', recs=[];

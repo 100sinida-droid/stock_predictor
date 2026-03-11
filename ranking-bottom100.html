@@ -2,68 +2,93 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BOTTOM 100 - AptScore</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  min-height: 100vh;
-  padding: 40px 20px;
-}
-.container { max-width: 1400px; margin: 0 auto; }
-.header { text-align: center; margin-bottom: 40px; }
-.header h1 { font-size: 56px; color: white; margin-bottom: 12px; }
-.header p { font-size: 20px; color: rgba(255,255,255,0.9); }
-.back-btn {
-  display: inline-block; padding: 14px 28px; background: rgba(255,255,255,0.25);
-  color: white; text-decoration: none; border-radius: 12px; margin-bottom: 32px;
-}
-.back-btn:hover { background: rgba(255,255,255,0.35); }
-.info { background: rgba(255,255,255,0.2); padding: 16px; border-radius: 12px; color: white; margin-bottom: 24px; text-align: center; }
-.ranking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 20px; }
-.rank-card { background: white; border-radius: 16px; padding: 24px; cursor: pointer; transition: 0.3s; }
-.rank-card:hover { transform: translateY(-6px); box-shadow: 0 12px 32px rgba(0,0,0,0.2); }
-.rank-number { padding: 8px 16px; background: #f0f0f0; border-radius: 8px; font-weight: 700; margin-bottom: 12px; display: inline-block; }
-.apt-name { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-.apt-address { font-size: 14px; color: #666; margin-bottom: 16px; }
-.score-display { display: flex; align-items: center; gap: 16px; }
-.score-number { font-size: 40px; font-weight: 900; }
-.grade-badge { padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 16px; }
-.grade-C { background: #ea580c; color: white; }
-.grade-D { background: #dc2626; color: white; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:linear-gradient(135deg,#f093fb,#f5576c);min-height:100vh;padding:40px 20px}
+.container{max-width:1400px;margin:0 auto}
+.header{text-align:center;margin-bottom:40px}
+.header h1{font-size:56px;color:#fff;margin-bottom:12px}
+.header p{font-size:20px;color:rgba(255,255,255,.9)}
+.back-btn{display:inline-block;padding:14px 28px;background:rgba(255,255,255,.25);color:#fff;text-decoration:none;border-radius:12px;margin-bottom:32px;font-weight:600}
+.back-btn:hover{background:rgba(255,255,255,.35)}
+.info{background:rgba(255,255,255,.2);padding:16px;border-radius:12px;color:#fff;margin-bottom:24px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:20px}
+.card{background:#fff;border-radius:16px;padding:24px;cursor:pointer;transition:.3s}
+.card:hover{transform:translateY(-6px);box-shadow:0 12px 32px rgba(0,0,0,.2)}
+.rank{padding:8px 16px;background:#f0f0f0;border-radius:8px;font-weight:700;margin-bottom:12px;display:inline-block}
+.name{font-size:22px;font-weight:800;margin-bottom:8px}
+.addr{font-size:14px;color:#666;margin-bottom:16px}
+.score{display:flex;align-items:center;gap:16px}
+.num{font-size:40px;font-weight:900}
+.badge{padding:8px 16px;border-radius:8px;font-weight:800;font-size:16px}
+.C{background:#ea580c;color:#fff}
+.D{background:#dc2626;color:#fff}
+.loading{text-align:center;padding:80px;color:#fff;font-size:20px}
 </style>
 </head>
 <body>
 <div class="container">
-  <a href="index.html" class="back-btn">← 메인으로</a>
-  <div class="header">
-    <h1>📉 BOTTOM 100</h1>
-    <p>하위 점수 아파트</p>
-  </div>
-  <div class="info">💡 하위 점수도 지역에 따라 투자 가치가 있을 수 있습니다</div>
-  <div id="ranking-container" class="ranking-grid"></div>
+<a href="index.html" class="back-btn">← 메인으로</a>
+<div class="header">
+<h1>📉 BOTTOM 100</h1>
+<p>하위 점수 아파트</p>
+</div>
+<div class="info">💡 하위 점수도 지역에 따라 투자 가치가 있을 수 있습니다</div>
+<div id="list" class="grid"><div class="loading">전체 DB에서 순위 계산 중...</div></div>
 </div>
 <script>
-const bottom = [
-  {n:'상계주공',gu:'노원구',a:'서울 노원구 상계동',s:45.2,g:'D'},
-  {n:'은평뉴타운',gu:'은평구',a:'서울 은평구',s:46.8,g:'D'},
-  {n:'강북구아파트',gu:'강북구',a:'서울 강북구',s:47.5,g:'C'},
-  {n:'도봉구단지',gu:'도봉구',a:'서울 도봉구',s:48.2,g:'C'},
-  {n:'중랑구',gu:'중랑구',a:'서울 중랑구',s:49.1,g:'C'},
-];
+const LOCATION_PREFERENCE={'강남구':100,'서초구':100,'과천시':95,'송파구':95,'용산구':94,'종로구':92,'분당구':92,'판교':92,'잠실':92,'마포구':90};
+const SCHOOL_SCORE={'강남구':95,'서초구':93,'송파구':90};
+const PRICE_MAP={'강남구':12000,'서초구':11000,'송파구':7500};
 
-document.getElementById('ranking-container').innerHTML = bottom.map((a,i) => {
-  return `<div class="rank-card" onclick="location.href='index.html?q=${encodeURIComponent(a.n)}'">
-    <div class="rank-number">${i+1}위</div>
-    <div class="apt-name">${a.n}</div>
-    <div class="apt-address">📍 ${a.a}</div>
-    <div class="score-display">
-      <span class="score-number" style="color:#dc2626">${a.s}</span>
-      <span class="grade-badge grade-${a.g}">${a.g}등급</span>
-    </div>
-  </div>`;
+function estimateGrade(a){
+  if(!a)return{s:0,g:'D'};
+  const gu=a.gu||'',dong=a.dong||'',yr=a.yr||0,sd=a.sd||9999,pr=a.price||0;
+  let p1=70;
+  for(let r in LOCATION_PREFERENCE){
+    if(dong&&dong.includes(r)){p1=LOCATION_PREFERENCE[r];break;}
+  }
+  if(p1===70){for(let r in LOCATION_PREFERENCE){if(gu&&gu.includes(r)){p1=LOCATION_PREFERENCE[r];break;}}}
+  if(p1===70&&a.city==='서울')p1=80;else if(p1===70&&a.city==='경기')p1=75;
+  let p2=sd<=300?85:sd<=500?75:sd<=800?65:sd<=1500?55:sd<=3000?40:25;
+  let p3=sd<=300?100:sd<=500?90:sd<=800?78:sd<=1200?63:sd<=2000?50:sd<=3000?38:sd<=4000?25:10;
+  const isSeoul=a.city==='서울',isCap=a.city==='서울'||a.city==='경기'||a.city==='인천';
+  p3=Math.min(100,p3*.75+(isSeoul?18:isCap?12:3));
+  const p4=SCHOOL_SCORE&&SCHOOL_SCORE[gu]?SCHOOL_SCORE[gu]:50;
+  const p5=55;
+  let p6=yr>=2023?95:yr>=2020?85:yr>=2018?75:yr>=2015?63:yr>=2012?52:yr>=2008?42:yr>=2003?33:yr>=1998?25:yr>0?15:50;
+  let p7=50;
+  if(pr>0){const gb=PRICE_MAP&&PRICE_MAP[gu]?PRICE_MAP[gu]:2500;p7=Math.round(Math.max(0,Math.min(100,(1.4-pr/gb)/.8*100)));}
+  const t=Math.round((p1*20+p2*20+p3*15+p4*15+p5*10+p6*10+p7*10)/100*10)/10;
+  return{s:t,g:t>=80?'S':t>=70?'A':t>=60?'B':t>=50?'C':'D'};
+}
+
+let APT_DB=[];
+try{if(window.opener&&window.opener.APT_DB)APT_DB=window.opener.APT_DB;}catch(e){}
+
+if(!APT_DB||APT_DB.length===0){
+  APT_DB=[
+    {n:'상계주공',city:'서울',gu:'노원구',dong:'상계동',a:'서울 노원구 상계동',yr:1988,sd:400},
+    {n:'은평뉴타운',city:'서울',gu:'은평구',dong:'은평구',a:'서울 은평구',yr:1995,sd:500},
+  ];
+}
+
+const scored=APT_DB.map(a=>{const r=estimateGrade(a);return{...a,score:r.s,grade:r.g};}).filter(a=>a.score>0);
+scored.sort((a,b)=>a.score-b.score);
+const bottom100=scored.slice(0,100);
+
+document.getElementById('list').innerHTML=bottom100.map((a,i)=>{
+  return`<div class="card" onclick="location.href='index.html?q=${encodeURIComponent(a.n)}'">
+<div class="rank">${i+1}위</div>
+<div class="name">${a.n}</div>
+<div class="addr">📍 ${a.a||a.gu}</div>
+<div class="score">
+<span class="num" style="color:#dc2626">${a.score}</span>
+<span class="badge ${a.grade}">${a.grade}등급</span>
+</div>
+</div>`;
 }).join('');
 </script>
 </body>
